@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Hospitality Staff",
+    "slug": "hospitality-service-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {},
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}

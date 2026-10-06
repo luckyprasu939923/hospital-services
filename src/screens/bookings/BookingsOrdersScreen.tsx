@@ -1,0 +1,1985 @@
+import React, { useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useApp } from '../../context/AppContext';
+import { colors, radius, spacing } from '../../theme/colors';
+import Card from '../../components/Card';
+import {
+  HomeVisitRequest,
+  OnlineConsultation,
+  OPBooking,
+  OPBookingStatus,
+  PharmacyOrder,
+} from '../../types';
+import { RootStackParamList } from '../../navigation/types';
+
+export default function BookingsOrdersScreen() {
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
+  const bottomPadding = bottomNavHeight + 16;
+  const {
+    providerType,
+    opBookings,
+    acceptOPBooking,
+    rescheduleOPBooking,
+    cancelOPBooking,
+    updateOPStatus,
+    consultations,
+    updateConsultationStatus,
+    uploadPrescription,
+    homeVisits,
+    acceptHomeVisit,
+    declineHomeVisit,
+    updateHomeVisitStatus,
+    pharmacyOrders,
+    verifyPrescription,
+    suggestSubstitution,
+    setOrderEta,
+    updateOrderStatus,
+    doctors,
+  } = useApp();
+
+  // Common Search & Status Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
+
+  // Doctor Sub-tab: 'consultations' | 'home_visits'
+  const [doctorSubTab, setDoctorSubTab] = useState<'consultations' | 'home_visits'>('consultations');
+
+  // Hospital Reschedule Modal State
+  const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
+  const [selectedBookingForReschedule, setSelectedBookingForReschedule] = useState<OPBooking | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState('2026-10-02');
+  const [rescheduleSlot, setRescheduleSlot] = useState('11:30 AM');
+
+  // Pharmacy Modals State
+  const [rejectRxModalVisible, setRejectRxModalVisible] = useState(false);
+  const [rejectOrderId, setRejectOrderId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('Prescription signature missing / illegible');
+
+  const [substitutionModalVisible, setSubstitutionModalVisible] = useState(false);
+  const [substOrderId, setSubstOrderId] = useState<string | null>(null);
+  const [substProductId, setSubstProductId] = useState<string | null>(null);
+  const [substProductName, setSubstProductName] = useState('');
+  const [substFormula, setSubstFormula] = useState('');
+  const [suggestedBrand, setSuggestedBrand] = useState('');
+
+  const [etaModalVisible, setEtaModalVisible] = useState(false);
+  const [etaOrderId, setEtaOrderId] = useState<string | null>(null);
+  const [etaMinutesInput, setEtaMinutesInput] = useState('30');
+
+  // Doctor Prescription Modal State
+  const [rxModalVisible, setRxModalVisible] = useState(false);
+  const [selectedConsultationForRx, setSelectedConsultationForRx] = useState<OnlineConsultation | null>(null);
+  const [diagnosisInput, setDiagnosisInput] = useState('Acute Bronchitis & Viral Pharyngitis');
+  const [adviceInput, setAdviceInput] = useState('Warm saline gargles twice daily. Hydrate well and rest.');
+  const [medNameInput, setMedNameInput] = useState('Augmentin 625 Duo');
+  const [medDosageInput, setMedDosageInput] = useState('625 mg');
+  const [medFreqInput, setMedFreqInput] = useState('1-0-1 (After food)');
+  const [medDurationInput, setMedDurationInput] = useState('5 days');
+
+  // ==========================================
+  // 1. HOSPITAL: OP Booking Render
+  // ==========================================
+  const filteredOPBookings = opBookings.filter((b) => {
+    const matchesSearch =
+      b.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.problemDescription.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      selectedStatusFilter === 'all' ? true : b.status === selectedStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const renderOPBookingItem = ({ item }: { item: OPBooking }) => {
+    return (
+      <Card style={styles.bookingCard}>
+        {/* Top Header */}
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.titleRow}>
+              <Text style={styles.patientName}>{item.patientName}</Text>
+              <Text style={styles.genderAgePill}>
+                {item.patientGender}, {item.patientAge} yrs
+              </Text>
+            </View>
+            <Text style={styles.phoneText}>📞 {item.patientPhone}</Text>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              item.status === 'completed'
+                ? { backgroundColor: colors.successLight }
+                : item.status === 'checked_in'
+                ? { backgroundColor: colors.infoLight }
+                : item.status === 'pending'
+                ? { backgroundColor: colors.warningLight }
+                : item.status === 'rescheduled'
+                ? { backgroundColor: colors.purpleLight }
+                : { backgroundColor: colors.borderLight },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                item.status === 'completed'
+                  ? { color: colors.success }
+                  : item.status === 'checked_in'
+                  ? { color: colors.info }
+                  : item.status === 'pending'
+                  ? { color: colors.warning }
+                  : item.status === 'rescheduled'
+                  ? { color: colors.purple }
+                  : { color: colors.textSecondary },
+              ]}
+            >
+              {item.status.replace('_', ' ').toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Doctor Assigned */}
+        <View style={styles.doctorBlock}>
+          <Ionicons name="medkit" size={15} color={colors.hospitalRed} />
+          <Text style={styles.doctorText}>
+            Assigned: <Text style={{ fontWeight: '700' }}>{item.doctorName}</Text> ({item.doctorSpecialization})
+          </Text>
+        </View>
+
+        {/* Problem Description */}
+        <View style={styles.problemBox}>
+          <Text style={styles.problemLabel}>Problem Description</Text>
+          <Text style={styles.problemContent}>{item.problemDescription}</Text>
+        </View>
+
+        {/* Appointment Date & Slot */}
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{item.appointmentDate}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{item.timeSlot}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="receipt-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>
+              Fee ₹{item.fee} - ₹50 = <Text style={styles.netAmount}>₹{item.netPayout}</Text>
+            </Text>
+          </View>
+        </View>
+
+        {item.rescheduledTo && (
+          <View style={styles.rescheduledBanner}>
+            <Ionicons name="calendar" size={13} color={colors.purple} />
+            <Text style={styles.rescheduledBannerText}>
+              Rescheduled To: {item.rescheduledTo}
+            </Text>
+          </View>
+        )}
+
+        {/* Notification Sync Guarantee Banner */}
+        <View style={styles.syncAlertRow}>
+          <Ionicons name="notifications" size={12} color={colors.primary} />
+          <Text style={styles.syncAlertText}>
+            Changes automatically notify patient via App, Mail & WhatsApp
+          </Text>
+        </View>
+
+        {/* Hospital Booking Actions */}
+        <View style={styles.actionsBar}>
+          {item.status === 'pending' && (
+            <>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  acceptOPBooking(item.id);
+                  Alert.alert('Booking Accepted', `Notified ${item.patientName} on WhatsApp & Email.`);
+                }}
+              >
+                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Accept</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.info }]}
+                onPress={() => {
+                  setSelectedBookingForReschedule(item);
+                  setRescheduleModalVisible(true);
+                }}
+              >
+                <Ionicons name="calendar-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Reschedule</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.danger }]}
+                onPress={() => {
+                  Alert.alert(
+                    'Cancel Booking',
+                    `Are you sure you want to cancel the booking for ${item.patientName}?`,
+                    [
+                      { text: 'No' },
+                      {
+                        text: 'Yes, Cancel',
+                        style: 'destructive',
+                        onPress: () => {
+                          cancelOPBooking(item.id, 'Doctor unavailable on requested slot');
+                          Alert.alert('Booking Cancelled', 'Patient has been notified with refund details.');
+                        },
+                      },
+                    ],
+                  );
+                }}
+              >
+                <Ionicons name="close" size={14} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Cancel</Text>
+              </Pressable>
+            </>
+          )}
+
+          {item.status === 'accepted' && (
+            <>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.info }]}
+                onPress={() => {
+                  updateOPStatus(item.id, 'checked_in');
+                  Alert.alert('Patient Checked-in', `${item.patientName} marked present at hospital OP desk.`);
+                }}
+              >
+                <Ionicons name="enter-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Check-in Patient</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.warning }]}
+                onPress={() => {
+                  updateOPStatus(item.id, 'no_show');
+                  Alert.alert('Marked No-show', `${item.patientName} was not present during slot.`);
+                }}
+              >
+                <Ionicons name="alert-circle-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>No-show</Text>
+              </Pressable>
+            </>
+          )}
+
+          {item.status === 'checked_in' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.success }]}
+              onPress={() => {
+                updateOPStatus(item.id, 'completed');
+                Alert.alert('Consultation Completed', `Payout of ₹${item.netPayout} moved to eligible settlements.`);
+              }}
+            >
+              <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Mark Completed</Text>
+            </Pressable>
+          )}
+        </View>
+      </Card>
+    );
+  };
+
+  // ==========================================
+  // 2. DOCTOR: Online Consultations & Home Visits
+  // ==========================================
+  const filteredConsultations = consultations.filter((c) => {
+    const matches =
+      c.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.problemDescription.toLowerCase().includes(searchQuery.toLowerCase());
+    return matches;
+  });
+
+  const filteredHomeVisits = homeVisits.filter((v) => {
+    const matches =
+      v.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.problemDescription.toLowerCase().includes(searchQuery.toLowerCase());
+    return matches;
+  });
+
+  const renderConsultationItem = ({ item }: { item: OnlineConsultation }) => {
+    return (
+      <Card style={styles.bookingCard}>
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.titleRow}>
+              <Text style={styles.patientName}>{item.patientName}</Text>
+              <View style={styles.onlineBadge}>
+                <Ionicons name="videocam" size={12} color={colors.medicalBlue} />
+                <Text style={styles.onlineBadgeText}>Video Consultation</Text>
+              </View>
+            </View>
+            <Text style={styles.phoneText}>
+              {item.patientGender}, {item.patientAge} yrs • 📞 {item.patientPhone}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              item.status === 'completed'
+                ? { backgroundColor: colors.successLight }
+                : item.status === 'in_call'
+                ? { backgroundColor: colors.infoLight }
+                : { backgroundColor: colors.medicalBlueLight },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                item.status === 'completed'
+                  ? { color: colors.success }
+                  : item.status === 'in_call'
+                  ? { color: colors.info }
+                  : { color: colors.medicalBlue },
+              ]}
+            >
+              {item.status.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.problemBox}>
+          <Text style={styles.problemLabel}>Patient Problem / Symptoms</Text>
+          <Text style={styles.problemContent}>{item.problemDescription}</Text>
+        </View>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{item.date}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{item.timeSlot}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>
+              Fee ₹{item.fee} - ₹50 = <Text style={styles.netAmount}>₹{item.netPayout} Net</Text>
+            </Text>
+          </View>
+        </View>
+
+        {/* Digital Prescription Info if uploaded */}
+        {item.prescriptionUploaded && item.prescription && (
+          <View style={styles.rxSummaryBox}>
+            <View style={styles.rxSummaryHeader}>
+              <Ionicons name="document-text" size={14} color={colors.primary} />
+              <Text style={styles.rxSummaryTitle}>
+                Digital Rx Issued: {item.prescription.diagnosis}
+              </Text>
+            </View>
+            <Text style={styles.rxSummaryMeds}>
+              Meds: {item.prescription.medicines.map((m) => m.name).join(', ')}
+            </Text>
+            <Text style={styles.rxSummaryAdvice}>Advice: {item.prescription.advice}</Text>
+            <View style={styles.rxSentChannelsRow}>
+              <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+              <Text style={styles.rxSentChannelsText}>Sent to patient App, Email & WhatsApp</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Action Buttons */}
+        <View style={styles.actionsBar}>
+          {item.status !== 'completed' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.medicalBlue }]}
+              onPress={() => navigation.navigate('LiveMeeting', { consultation: item })}
+            >
+              <Ionicons name="videocam" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Join Meeting Link</Text>
+            </Pressable>
+          )}
+
+          <Pressable
+            style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              setSelectedConsultationForRx(item);
+              setRxModalVisible(true);
+            }}
+          >
+            <Ionicons name="create-outline" size={14} color="#FFFFFF" />
+            <Text style={styles.actionBtnText}>
+              {item.prescriptionUploaded ? 'Edit Digital Rx' : 'Write Rx & Notes'}
+            </Text>
+          </Pressable>
+
+          {item.status !== 'completed' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.warning }]}
+              onPress={() => {
+                updateConsultationStatus(item.id, 'no_show');
+                Alert.alert('Marked No-show', 'Patient did not attend online video call.');
+              }}
+            >
+              <Ionicons name="alert-circle-outline" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>No-show</Text>
+            </Pressable>
+          )}
+        </View>
+      </Card>
+    );
+  };
+
+  const renderHomeVisitItem = ({ item }: { item: HomeVisitRequest }) => {
+    return (
+      <Card style={styles.bookingCard}>
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.titleRow}>
+              <Text style={styles.patientName}>{item.patientName}</Text>
+              <View style={[styles.onlineBadge, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="car" size={12} color={colors.primary} />
+                <Text style={[styles.onlineBadgeText, { color: colors.primary }]}>
+                  Home Visit ({item.distanceKm} km away)
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.phoneText}>
+              {item.patientGender}, {item.patientAge} yrs • 📞 {item.patientPhone}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              item.status === 'completed'
+                ? { backgroundColor: colors.successLight }
+                : item.status === 'reached'
+                ? { backgroundColor: colors.infoLight }
+                : item.status === 'on_the_way'
+                ? { backgroundColor: colors.purpleLight }
+                : item.status === 'accepted'
+                ? { backgroundColor: colors.primaryLight }
+                : { backgroundColor: colors.warningLight },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                item.status === 'completed'
+                  ? { color: colors.success }
+                  : item.status === 'reached'
+                  ? { color: colors.info }
+                  : item.status === 'on_the_way'
+                  ? { color: colors.purple }
+                  : item.status === 'accepted'
+                  ? { color: colors.primary }
+                  : { color: colors.warning },
+              ]}
+            >
+              {item.status.replace('_', ' ').toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Address and Navigation */}
+        <View style={styles.addressBox}>
+          <Ionicons name="location" size={16} color={colors.danger} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.addressText}>{item.address}</Text>
+            {item.landmark && <Text style={styles.landmarkText}>Landmark: {item.landmark}</Text>}
+          </View>
+          <Pressable
+            style={styles.navMapBtn}
+            onPress={() => {
+              Alert.alert(
+                'Open Map Navigation',
+                `Launching turn-by-turn navigation to: ${item.address} (approx ${item.distanceKm} km)`,
+              );
+            }}
+          >
+            <Ionicons name="navigate" size={13} color="#FFFFFF" />
+            <Text style={styles.navMapBtnText}>Navigate</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.problemBox}>
+          <Text style={styles.problemLabel}>Symptoms & Chief Complaints</Text>
+          <Text style={styles.problemContent}>{item.problemDescription}</Text>
+        </View>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{item.date}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{item.timeSlot}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>
+              Fee ₹{item.fee} - ₹50 = <Text style={styles.netAmount}>₹{item.netPayout} Net</Text>
+            </Text>
+          </View>
+        </View>
+
+        {item.prescriptionNotes && (
+          <View style={styles.rxSummaryBox}>
+            <Text style={styles.rxSummaryTitle}>Visit Notes & Rx Uploaded</Text>
+            <Text style={styles.rxSummaryAdvice}>{item.prescriptionNotes}</Text>
+          </View>
+        )}
+
+        {/* Home Visit Status Progression Buttons */}
+        <View style={styles.actionsBar}>
+          {item.status === 'pending' && (
+            <>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  acceptHomeVisit(item.id);
+                  Alert.alert(
+                    'Home Visit Accepted',
+                    `Your contact number and ETA have been shared with ${item.patientName}.`,
+                  );
+                }}
+              >
+                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Accept Request</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.danger }]}
+                onPress={() => {
+                  declineHomeVisit(item.id);
+                  Alert.alert('Visit Declined', 'The request has been returned to dispatch.');
+                }}
+              >
+                <Ionicons name="close" size={14} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Decline</Text>
+              </Pressable>
+            </>
+          )}
+
+          {item.status === 'accepted' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.info }]}
+              onPress={() => {
+                updateHomeVisitStatus(item.id, 'on_the_way');
+                Alert.alert('Status Updated', 'Patient notified: Doctor is ON THE WAY.');
+              }}
+            >
+              <Ionicons name="bicycle" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Update: On The Way</Text>
+            </Pressable>
+          )}
+
+          {item.status === 'on_the_way' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.purple }]}
+              onPress={() => {
+                updateHomeVisitStatus(item.id, 'reached');
+                Alert.alert('Status Updated', 'Patient notified: Doctor has REACHED the doorstep.');
+              }}
+            >
+              <Ionicons name="location" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Update: Reached</Text>
+            </Pressable>
+          )}
+
+          {item.status === 'reached' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.success }]}
+              onPress={() => {
+                updateHomeVisitStatus(
+                  item.id,
+                  'completed',
+                  'Vitals normal. Administered prescribed analgesics. Rest advised for 48 hrs.',
+                );
+                Alert.alert(
+                  'Visit Completed',
+                  'Prescription & Visit Notes recorded and dispatched to patient via WhatsApp.',
+                );
+              }}
+            >
+              <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Complete & Record Rx</Text>
+            </Pressable>
+          )}
+        </View>
+      </Card>
+    );
+  };
+
+  // ==========================================
+  // 3. PHARMACY: Medicine Delivery Orders Render
+  // ==========================================
+  const filteredPharmacyOrders = pharmacyOrders.filter((o) => {
+    const matches =
+      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.deliveryAddress.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      selectedStatusFilter === 'all' ? true : o.status === selectedStatusFilter;
+    return matches && matchesStatus;
+  });
+
+  const renderPharmacyOrderItem = ({ item }: { item: PharmacyOrder }) => {
+    return (
+      <Card style={styles.bookingCard}>
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.titleRow}>
+              <Text style={styles.patientName}>{item.customerName}</Text>
+              <Text style={styles.orderIdBadge}>Order #{item.id}</Text>
+            </View>
+            <Text style={styles.phoneText}>📞 {item.customerPhone}</Text>
+            <Text style={styles.addressLineText} numberOfLines={1}>
+              📍 {item.deliveryAddress}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              item.status === 'delivered'
+                ? { backgroundColor: colors.successLight }
+                : item.status === 'out_for_delivery'
+                ? { backgroundColor: colors.infoLight }
+                : item.status === 'packed'
+                ? { backgroundColor: colors.purpleLight }
+                : item.status === 'accepted'
+                ? { backgroundColor: colors.pharmacyTealLight }
+                : { backgroundColor: colors.warningLight },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                item.status === 'delivered'
+                  ? { color: colors.success }
+                  : item.status === 'out_for_delivery'
+                  ? { color: colors.info }
+                  : item.status === 'packed'
+                  ? { color: colors.purple }
+                  : item.status === 'accepted'
+                  ? { color: colors.pharmacyTeal }
+                  : { color: colors.warning },
+              ]}
+            >
+              {item.status.replace('_', ' ').toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Prescription Verification Status Banner */}
+        <View
+          style={[
+            styles.rxVerificationCard,
+            item.prescriptionStatus === 'approved'
+              ? { backgroundColor: colors.successLight, borderColor: colors.success }
+              : item.prescriptionStatus === 'rejected'
+              ? { backgroundColor: colors.dangerLight, borderColor: colors.danger }
+              : { backgroundColor: colors.warningLight, borderColor: colors.warning },
+          ]}
+        >
+          <View style={styles.rxVerifRow}>
+            <Ionicons
+              name={
+                item.prescriptionStatus === 'approved'
+                  ? 'shield-checkmark'
+                  : item.prescriptionStatus === 'rejected'
+                  ? 'close-circle'
+                  : 'document-text-outline'
+              }
+              size={18}
+              color={
+                item.prescriptionStatus === 'approved'
+                  ? colors.success
+                  : item.prescriptionStatus === 'rejected'
+                  ? colors.danger
+                  : colors.warning
+              }
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rxVerifTitle}>
+                Uploaded Prescription:{' '}
+                <Text style={{ fontWeight: '800' }}>{item.prescriptionStatus.toUpperCase()}</Text>
+              </Text>
+              {item.rejectionReason && (
+                <Text style={styles.rejectionReasonText}>Reason: {item.rejectionReason}</Text>
+              )}
+            </View>
+
+            {item.prescriptionStatus === 'pending' && (
+              <View style={styles.verifBtnGroup}>
+                <Pressable
+                  style={[styles.smallVerifBtn, { backgroundColor: colors.success }]}
+                  onPress={() => {
+                    verifyPrescription(item.id, 'approved');
+                    Alert.alert('Prescription Verified', 'Order approved for packing and dispatch.');
+                  }}
+                >
+                  <Text style={styles.smallVerifBtnText}>Approve</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.smallVerifBtn, { backgroundColor: colors.danger }]}
+                  onPress={() => {
+                    setRejectOrderId(item.id);
+                    setRejectRxModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.smallVerifBtnText}>Reject</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Ordered Medicines & Equipment Table */}
+        <View style={styles.itemsTable}>
+          <Text style={styles.itemsTableHeading}>Order Items & Active Composition:</Text>
+          {item.items.map((prod, idx) => (
+            <View key={idx} style={styles.orderItemRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.orderItemName}>{prod.name}</Text>
+                <Text style={styles.orderItemFormula}>Active Formula: {prod.formula}</Text>
+                {prod.suggestedSubstitution && (
+                  <View style={styles.substNotice}>
+                    <Ionicons name="swap-horizontal" size={12} color={colors.purple} />
+                    <Text style={styles.substNoticeText}>
+                      Substitute Suggested: {prod.suggestedSubstitution} (Same Formula)
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.orderItemQty}>Qty: {prod.quantity}</Text>
+                <Text style={styles.orderItemPrice}>₹{prod.price * prod.quantity}</Text>
+                {/* Substitution suggestion trigger */}
+                <Pressable
+                  style={styles.substBtn}
+                  onPress={() => {
+                    setSubstOrderId(item.id);
+                    setSubstProductId(prod.productId);
+                    setSubstProductName(prod.name);
+                    setSubstFormula(prod.formula);
+                    setSuggestedBrand(`Generic ${prod.formula} 500mg`);
+                    setSubstitutionModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.substBtnText}>Suggest Substitute</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Meta & Payout Row */}
+        <View style={styles.metaRow}>
+          <Pressable
+            style={styles.metaItem}
+            onPress={() => {
+              setEtaOrderId(item.id);
+              setEtaMinutesInput(String(item.etaMinutes || 30));
+              setEtaModalVisible(true);
+            }}
+          >
+            <Ionicons name="timer-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>ETA: {item.etaMinutes || 30} mins (Edit)</Text>
+          </Pressable>
+          <View style={styles.metaItem}>
+            <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
+            <Text style={styles.metaText}>
+              Total ₹{item.totalAmount} - ₹50 = <Text style={styles.netAmount}>₹{item.netPayout} Net</Text>
+            </Text>
+          </View>
+        </View>
+
+        {/* Pharmacy Order Status Progression */}
+        <View style={styles.actionsBar}>
+          {item.status === 'pending' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.pharmacyTeal }]}
+              onPress={() => {
+                updateOrderStatus(item.id, 'accepted');
+                Alert.alert('Order Accepted', 'Customer notified that order is accepted.');
+              }}
+            >
+              <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Accept Order</Text>
+            </Pressable>
+          )}
+
+          {item.status === 'accepted' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.purple }]}
+              onPress={() => {
+                updateOrderStatus(item.id, 'packed');
+                Alert.alert('Order Packed', 'Medicines bagged with invoice. Ready for pickup.');
+              }}
+            >
+              <Ionicons name="cube-outline" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Mark Packed</Text>
+            </Pressable>
+          )}
+
+          {item.status === 'packed' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.info }]}
+              onPress={() => {
+                updateOrderStatus(item.id, 'out_for_delivery');
+                Alert.alert('Out For Delivery', 'Delivery partner dispatched with package.');
+              }}
+            >
+              <Ionicons name="bicycle-outline" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Out for Delivery</Text>
+            </Pressable>
+          )}
+
+          {item.status === 'out_for_delivery' && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.success }]}
+              onPress={() => {
+                updateOrderStatus(item.id, 'delivered');
+                Alert.alert('Order Delivered', `Payout of ₹${item.netPayout} added to settlements.`);
+              }}
+            >
+              <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Mark Delivered</Text>
+            </Pressable>
+          )}
+        </View>
+      </Card>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Screen Header */}
+      <View style={styles.screenHeader}>
+        <Pressable
+          style={styles.backBtn}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'Home' } as any);
+            }
+          }}
+          accessibilityLabel="Back to Home"
+          hitSlop={8}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.text} />
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.screenTitle}>
+            {providerType === 'hospital'
+              ? 'OP Appointments'
+              : providerType === 'doctor'
+              ? 'Consultations & Visits'
+              : 'Pharmacy Orders'}
+          </Text>
+          <Text style={styles.screenSubtitle}>
+            {providerType === 'hospital'
+              ? 'Manage hospital out-patient schedules'
+              : providerType === 'doctor'
+              ? 'Online telemedicine & doorstep home visits'
+              : 'Prescription verification & medicine delivery'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Doctor Mode Sub-tabs (Consultations vs Home Visits) */}
+      {providerType === 'doctor' && (
+        <View style={styles.doctorSubTabsWrap}>
+          <Pressable
+            style={[
+              styles.doctorSubTabBtn,
+              doctorSubTab === 'consultations' && styles.doctorSubTabBtnActive,
+            ]}
+            onPress={() => setDoctorSubTab('consultations')}
+          >
+            <Ionicons
+              name="videocam-outline"
+              size={15}
+              color={doctorSubTab === 'consultations' ? '#FFFFFF' : colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.doctorSubTabText,
+                doctorSubTab === 'consultations' && styles.doctorSubTabTextActive,
+              ]}
+            >
+              Online Consultations ({consultations.length})
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.doctorSubTabBtn,
+              doctorSubTab === 'home_visits' && styles.doctorSubTabBtnActive,
+            ]}
+            onPress={() => setDoctorSubTab('home_visits')}
+          >
+            <Ionicons
+              name="car-outline"
+              size={15}
+              color={doctorSubTab === 'home_visits' ? '#FFFFFF' : colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.doctorSubTabText,
+                doctorSubTab === 'home_visits' && styles.doctorSubTabTextActive,
+              ]}
+            >
+              Home Visits ({homeVisits.length})
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Search Input Bar */}
+      <View style={styles.searchBarWrap}>
+        <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by patient name, condition or phone..."
+          placeholderTextColor={colors.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <Pressable onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+          </Pressable>
+        )}
+      </View>
+
+      {/* Status Filter Chips (for Hospital and Pharmacy) */}
+      {providerType !== 'doctor' && (
+        <View style={styles.filterChipsRow}>
+          {(providerType === 'hospital'
+            ? [
+                { id: 'all', label: 'All' },
+                { id: 'pending', label: 'Pending' },
+                { id: 'accepted', label: 'Accepted' },
+                { id: 'checked_in', label: 'Checked-in' },
+                { id: 'completed', label: 'Completed' },
+              ]
+            : [
+                { id: 'all', label: 'All' },
+                { id: 'pending', label: 'Pending' },
+                { id: 'accepted', label: 'Accepted' },
+                { id: 'packed', label: 'Packed' },
+                { id: 'out_for_delivery', label: 'Out for Delivery' },
+                { id: 'delivered', label: 'Delivered' },
+              ]
+          ).map((chip) => {
+            const active = selectedStatusFilter === chip.id;
+            return (
+              <Pressable
+                key={chip.id}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setSelectedStatusFilter(chip.id)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                  {chip.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Main Dynamic List */}
+      {providerType === 'hospital' && (
+        <FlatList
+          data={filteredOPBookings}
+          keyExtractor={(item) => item.id}
+          renderItem={renderOPBookingItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Ionicons name="calendar-outline" size={44} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No OP Bookings Found</Text>
+              <Text style={styles.emptySub}>No bookings match your current search and filter.</Text>
+            </View>
+          }
+        />
+      )}
+
+      {providerType === 'doctor' && doctorSubTab === 'consultations' && (
+        <FlatList
+          data={filteredConsultations}
+          keyExtractor={(item) => item.id}
+          renderItem={renderConsultationItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Ionicons name="videocam-outline" size={44} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No Video Consultations Found</Text>
+            </View>
+          }
+        />
+      )}
+
+      {providerType === 'doctor' && doctorSubTab === 'home_visits' && (
+        <FlatList
+          data={filteredHomeVisits}
+          keyExtractor={(item) => item.id}
+          renderItem={renderHomeVisitItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Ionicons name="car-outline" size={44} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No Home Visit Requests</Text>
+            </View>
+          }
+        />
+      )}
+
+      {providerType === 'pharmacy' && (
+        <FlatList
+          data={filteredPharmacyOrders}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPharmacyOrderItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Ionicons name="cube-outline" size={44} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No Delivery Orders Found</Text>
+            </View>
+          }
+        />
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 1: HOSPITAL RESCHEDULE MODAL                       */}
+      {/* ======================================================== */}
+      <Modal visible={rescheduleModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Reschedule OP Appointment</Text>
+              <Pressable onPress={() => setRescheduleModalVisible(false)}>
+                <Ionicons name="close" size={22} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalSub}>
+              Patient: {selectedBookingForReschedule?.patientName} ({selectedBookingForReschedule?.doctorName})
+            </Text>
+
+            <Text style={styles.inputLabel}>New Appointment Date (YYYY-MM-DD)</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={rescheduleDate}
+              onChangeText={setRescheduleDate}
+              placeholder="e.g. 2026-10-02"
+            />
+
+            <Text style={styles.inputLabel}>New Time Slot</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={rescheduleSlot}
+              onChangeText={setRescheduleSlot}
+              placeholder="e.g. 11:30 AM"
+            />
+
+            <View style={styles.modalNotice}>
+              <Ionicons name="information-circle" size={15} color={colors.primary} />
+              <Text style={styles.modalNoticeText}>
+                The customer will be instantly notified with confirmation on WhatsApp, Email and One Buddy App.
+              </Text>
+            </View>
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => setRescheduleModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.modalSubmitBtn}
+                onPress={() => {
+                  if (selectedBookingForReschedule) {
+                    rescheduleOPBooking(selectedBookingForReschedule.id, rescheduleDate, rescheduleSlot);
+                    setRescheduleModalVisible(false);
+                    Alert.alert(
+                      'Appointment Rescheduled',
+                      `Patient ${selectedBookingForReschedule.patientName} moved to ${rescheduleDate} at ${rescheduleSlot}. Notification dispatched.`,
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.modalSubmitText}>Confirm & Send</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* MODAL 2: PHARMACY PRESCRIPTION REJECTION REASON          */}
+      {/* ======================================================== */}
+      <Modal visible={rejectRxModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Reject Prescription</Text>
+              <Pressable onPress={() => setRejectRxModalVisible(false)}>
+                <Ionicons name="close" size={22} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalSub}>
+              Specify why the prescription cannot be dispensed:
+            </Text>
+
+            <TextInput
+              style={[styles.modalInput, { height: 80, textAlignVertical: 'top' }]}
+              multiline
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              placeholder="e.g. Expired date, Doctor registration number missing, etc."
+            />
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => setRejectRxModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.modalSubmitBtn, { backgroundColor: colors.danger }]}
+                onPress={() => {
+                  if (rejectOrderId) {
+                    verifyPrescription(rejectOrderId, 'rejected', rejectReason);
+                    setRejectRxModalVisible(false);
+                    Alert.alert('Prescription Rejected', 'Customer notified with reason to re-upload.');
+                  }
+                }}
+              >
+                <Text style={styles.modalSubmitText}>Confirm Rejection</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* MODAL 3: PHARMACY MEDICINE SUBSTITUTION                  */}
+      {/* ======================================================== */}
+      <Modal visible={substitutionModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Suggest Formula Substitution</Text>
+              <Pressable onPress={() => setSubstitutionModalVisible(false)}>
+                <Ionicons name="close" size={22} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalSub}>
+              Item out of stock: <Text style={{ fontWeight: '700' }}>{substProductName}</Text>
+            </Text>
+            <Text style={styles.modalSub}>
+              Active Chemical Formula: <Text style={{ fontWeight: '700' }}>{substFormula}</Text>
+            </Text>
+
+            <Text style={styles.inputLabel}>Available Alternative Brand (Same Formula)</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={suggestedBrand}
+              onChangeText={setSuggestedBrand}
+              placeholder="e.g. Cipla Paracetamol 650mg"
+            />
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => setSubstitutionModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.modalSubmitBtn, { backgroundColor: colors.pharmacyTeal }]}
+                onPress={() => {
+                  if (substOrderId && substProductId && suggestedBrand.trim()) {
+                    suggestSubstitution(substOrderId, substProductId, suggestedBrand);
+                    setSubstitutionModalVisible(false);
+                    Alert.alert(
+                      'Substitution Proposed',
+                      `Customer notified to approve substitution: ${suggestedBrand}`,
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.modalSubmitText}>Send Suggestion</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* MODAL 4: PHARMACY ETA SETTER                             */}
+      {/* ======================================================== */}
+      <Modal visible={etaModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Set Estimated Delivery Time</Text>
+              <Pressable onPress={() => setEtaModalVisible(false)}>
+                <Ionicons name="close" size={22} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.inputLabel}>Estimated Delivery Minutes</Text>
+            <TextInput
+              style={styles.modalInput}
+              keyboardType="numeric"
+              value={etaMinutesInput}
+              onChangeText={setEtaMinutesInput}
+              placeholder="e.g. 25"
+            />
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => setEtaModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.modalSubmitBtn, { backgroundColor: colors.pharmacyTeal }]}
+                onPress={() => {
+                  const mins = parseInt(etaMinutesInput, 10);
+                  if (etaOrderId && !isNaN(mins)) {
+                    setOrderEta(etaOrderId, mins);
+                    setEtaModalVisible(false);
+                    Alert.alert('ETA Updated', `Delivery ETA set to ${mins} minutes.`);
+                  }
+                }}
+              >
+                <Text style={styles.modalSubmitText}>Save ETA</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* MODAL 5: DOCTOR DIGITAL PRESCRIPTION BUILDER             */}
+      {/* ======================================================== */}
+      <Modal visible={rxModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '85%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Digital Prescription Builder</Text>
+              <Pressable onPress={() => setRxModalVisible(false)}>
+                <Ionicons name="close" size={22} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalSub}>
+                Patient: <Text style={{ fontWeight: '700' }}>{selectedConsultationForRx?.patientName}</Text> (
+                {selectedConsultationForRx?.patientGender}, {selectedConsultationForRx?.patientAge} yrs)
+              </Text>
+
+              <Text style={styles.inputLabel}>Clinical Diagnosis</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={diagnosisInput}
+                onChangeText={setDiagnosisInput}
+                placeholder="e.g. Acute Viral Pharyngitis"
+              />
+
+              <Text style={styles.inputLabel}>Prescribed Medicine</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={medNameInput}
+                onChangeText={setMedNameInput}
+                placeholder="Medicine Name (e.g. Augmentin 625 Duo)"
+              />
+
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Dosage</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={medDosageInput}
+                    onChangeText={setMedDosageInput}
+                    placeholder="625 mg"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Frequency</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={medFreqInput}
+                    onChangeText={setMedFreqInput}
+                    placeholder="1-0-1"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.inputLabel}>Duration & Timing</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={medDurationInput}
+                onChangeText={setMedDurationInput}
+                placeholder="5 days after food"
+              />
+
+              <Text style={styles.inputLabel}>Clinical Advice & Precautions</Text>
+              <TextInput
+                style={[styles.modalInput, { height: 70, textAlignVertical: 'top' }]}
+                multiline
+                value={adviceInput}
+                onChangeText={setAdviceInput}
+                placeholder="Instructions for patient..."
+              />
+
+              <View style={styles.modalNotice}>
+                <Ionicons name="send" size={14} color={colors.primary} />
+                <Text style={styles.modalNoticeText}>
+                  Upon confirmation, this digital prescription will be generated with a secure QR code and sent
+                  directly to the patient's App, Registered Email, and WhatsApp.
+                </Text>
+              </View>
+
+              <View style={styles.modalActions}>
+                <Pressable
+                  style={styles.modalCancelBtn}
+                  onPress={() => setRxModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.modalSubmitBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    if (selectedConsultationForRx) {
+                      uploadPrescription(selectedConsultationForRx.id, {
+                        patientName: selectedConsultationForRx.patientName,
+                        doctorName: 'Dr. Vikram Sengupta, MD',
+                        diagnosis: diagnosisInput,
+                        advice: adviceInput,
+                        medicines: [
+                          {
+                            id: `m-${Date.now()}`,
+                            name: medNameInput,
+                            dosage: medDosageInput,
+                            frequency: medFreqInput,
+                            timing: 'After food',
+                            duration: medDurationInput,
+                          },
+                        ],
+                      });
+                      setRxModalVisible(false);
+                      Alert.alert(
+                        'Prescription Sent Successfully',
+                        `Dispatched to ${selectedConsultationForRx.patientName} via One Buddy App, Email, and WhatsApp.`,
+                      );
+                    }
+                  }}
+                >
+                  <Text style={styles.modalSubmitText}>Generate & Send Rx</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  screenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    minHeight: 56,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  screenTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  screenSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  doctorSubTabsWrap: {
+    flexDirection: 'row',
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    gap: 8,
+  },
+  doctorSubTabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  doctorSubTabBtnActive: {
+    backgroundColor: colors.medicalBlue,
+    borderColor: colors.medicalBlue,
+  },
+  doctorSubTabText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  doctorSubTabTextActive: {
+    color: '#FFFFFF',
+  },
+  searchBarWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+    padding: 0,
+  },
+  filterChipsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  filterChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  filterChipActive: {
+    backgroundColor: colors.secondary,
+    borderColor: colors.secondary,
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  listContent: {
+    padding: spacing.lg,
+    paddingBottom: 110,
+    gap: spacing.md,
+  },
+  bookingCard: {
+    padding: spacing.md,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  patientName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  genderAgePill: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  phoneText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  addressLineText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  orderIdBadge: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.sm,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  doctorBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.background,
+    padding: spacing.xs + 2,
+    borderRadius: radius.sm,
+    marginVertical: 4,
+  },
+  doctorText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  problemBox: {
+    backgroundColor: colors.background,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    marginVertical: 6,
+  },
+  problemLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  problemContent: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 6,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  netAmount: {
+    fontWeight: '800',
+    color: colors.success,
+  },
+  rescheduledBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.purpleLight,
+    padding: 6,
+    borderRadius: radius.sm,
+    marginVertical: 4,
+  },
+  rescheduledBannerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.purple,
+  },
+  syncAlertRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  syncAlertText: {
+    fontSize: 10,
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  actionsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+  },
+  actionBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  onlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.medicalBlueLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  onlineBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.medicalBlue,
+  },
+  addressBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.background,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    marginVertical: 6,
+  },
+  addressText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  landmarkText: {
+    fontSize: 10,
+    color: colors.textMuted,
+  },
+  navMapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.danger,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: radius.sm,
+  },
+  navMapBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  rxSummaryBox: {
+    backgroundColor: colors.primaryLight,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.primaryDark + '30',
+  },
+  rxSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  rxSummaryTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primaryDark,
+  },
+  rxSummaryMeds: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  rxSummaryAdvice: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  rxSentChannelsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  rxSentChannelsText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.success,
+  },
+  rxVerificationCard: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: spacing.sm,
+    marginVertical: 6,
+  },
+  rxVerifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rxVerifTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  rejectionReasonText: {
+    fontSize: 11,
+    color: colors.danger,
+    marginTop: 1,
+  },
+  verifBtnGroup: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  smallVerifBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+  },
+  smallVerifBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  itemsTable: {
+    backgroundColor: colors.background,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    marginVertical: 6,
+  },
+  itemsTableHeading: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  orderItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  orderItemName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  orderItemFormula: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  orderItemQty: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  orderItemPrice: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  substBtn: {
+    marginTop: 3,
+    backgroundColor: colors.purpleLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+  },
+  substBtnText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.purple,
+  },
+  substNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.purpleLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+    marginTop: 2,
+  },
+  substNoticeText: {
+    fontSize: 10,
+    color: colors.purple,
+    fontWeight: '700',
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 10,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginBottom: 4,
+    marginTop: 6,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: colors.text,
+    backgroundColor: colors.background,
+  },
+  modalNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: colors.primaryLight,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+  },
+  modalNoticeText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.primaryDark,
+    lineHeight: 15,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: spacing.lg,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalCancelText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  modalSubmitBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
+  modalSubmitText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+});
