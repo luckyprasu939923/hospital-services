@@ -20,6 +20,48 @@ import StatCard from '../components/StatCard';
 import { RootStackParamList } from '../navigation/types';
 import { ProviderType } from '../types';
 
+const HEALTHCARE_CATEGORIES = [
+  {
+    id: 'hospital' as ProviderType,
+    title: 'Hospital',
+    badge: 'Super Speciality',
+    subtitle: 'Inpatient Admissions, ICU Beds & 24x7 Emergency',
+    features: ['180 Total Beds', '24 ICU Beds', '6 OT Surgical Suites'],
+    icon: 'business' as const,
+    color: colors.hospitalRed,
+    lightBg: colors.hospitalRedLight,
+    borderColor: '#FECACA',
+    registerRoute: 'HospitalRegistration' as const,
+    registerText: 'Register Hospital',
+  },
+  {
+    id: 'pharmacy' as ProviderType,
+    title: 'Pharmacy',
+    badge: 'Retail & Clinical',
+    subtitle: 'Form 20/21 Drug Retail, Cold Chain & Fast Delivery',
+    features: ['Drug Retail Form 20/21', 'Cold Chain Storage', 'Home Delivery'],
+    icon: 'flask' as const,
+    color: colors.pharmacyTeal,
+    lightBg: colors.pharmacyTealLight,
+    borderColor: '#99F6E4',
+    registerRoute: 'PharmacyRegistration' as const,
+    registerText: 'Register Pharmacy',
+  },
+  {
+    id: 'doctor' as ProviderType,
+    title: 'Doctor',
+    badge: 'Specialist Clinic',
+    subtitle: 'OPD Practice, Video Consultations & Home Care',
+    features: ['MCI / SMC Registered', 'Live Teleconsult', 'In-Home Care'],
+    icon: 'medkit' as const,
+    color: colors.doctorBanner,
+    lightBg: colors.medicalBlueLight,
+    borderColor: '#BFDBFE',
+    registerRoute: 'DoctorRegistration' as const,
+    registerText: 'Register Doctor',
+  },
+];
+
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -228,53 +270,145 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* 2. Banner: Placed below the header with 12px top margin, full width with 16px side padding, rounded corners, and no overlap */}
-        <View style={styles.bannerWrapper}>
-          <View style={styles.modeSwitcherCard}>
-            <View style={styles.modeSwitcherHeader}>
-              <Ionicons name="layers-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.modeSwitcherLabel}>Provider Portal Role:</Text>
-            </View>
-            <View style={styles.modeTabsRow}>
-              {(['hospital', 'doctor', 'pharmacy'] as ProviderType[]).map((type) => {
-                const active = providerType === type;
-                return (
-                  <Pressable
-                    key={type}
-                    style={[
-                      styles.modeTabBtn,
-                      active && {
-                        backgroundColor:
-                          type === 'hospital'
-                            ? colors.hospitalRed
-                            : type === 'doctor'
-                            ? colors.doctorBanner
-                            : colors.pharmacyTeal,
-                        borderColor: 'transparent',
-                      },
-                    ]}
-                    onPress={() => switchProviderMode(type)}
-                  >
-                    <Ionicons
-                      name={
-                        type === 'hospital'
-                          ? 'business'
-                          : type === 'doctor'
-                          ? 'medkit'
-                          : 'flask'
-                      }
-                      size={13}
-                      color={active ? '#FFFFFF' : colors.textSecondary}
-                      style={{ marginRight: 3 }}
-                    />
-                    <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
-                      {type.toUpperCase()}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+        {/* Healthcare Categories in Front & Registration Portals */}
+        <View style={styles.categoriesSection}>
+          <View style={styles.categoriesSectionHeader}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="apps" size={16} color={currentThemeColor} />
+                <Text style={styles.categoriesSectionTitle}>Healthcare Categories</Text>
+              </View>
+              <Text style={styles.categoriesSectionSubtitle}>
+                Select category to switch dashboard or register a new facility
+              </Text>
             </View>
           </View>
+
+          {/* 3 Categories Showcase Cards */}
+          <View style={styles.categoriesGrid}>
+            {HEALTHCARE_CATEGORIES.map((cat) => {
+              const isActive = providerType === cat.id;
+              return (
+                <View
+                  key={cat.id}
+                  style={[
+                    styles.categoryCard,
+                    isActive && {
+                      borderColor: cat.color,
+                      borderWidth: 2,
+                      backgroundColor: '#FFFFFF',
+                      shadowColor: cat.color,
+                      shadowOpacity: 0.14,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    },
+                  ]}
+                >
+                  <View style={styles.categoryCardHeader}>
+                    <View style={[styles.categoryIconWrap, { backgroundColor: cat.lightBg }]}>
+                      <Ionicons name={cat.icon} size={22} color={cat.color} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <View style={styles.categoryTitleRow}>
+                        <Text style={styles.categoryTitle}>{cat.title}</Text>
+                        {isActive ? (
+                          <View style={[styles.activePillBadge, { backgroundColor: cat.color }]}>
+                            <Ionicons name="checkmark-circle" size={11} color="#FFFFFF" />
+                            <Text style={styles.activePillText}>ACTIVE PORTAL</Text>
+                          </View>
+                        ) : (
+                          <View style={[styles.categoryBadgePill, { backgroundColor: cat.lightBg }]}>
+                            <Text style={[styles.categoryBadgeText, { color: cat.color }]}>
+                              {cat.badge}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.categorySubtitle} numberOfLines={2}>
+                        {cat.subtitle}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Highlights feature pills */}
+                  <View style={styles.categoryFeaturesRow}>
+                    {cat.features.map((feat, idx) => (
+                      <View key={idx} style={styles.featureChip}>
+                        <View style={[styles.featureDot, { backgroundColor: cat.color }]} />
+                        <Text style={styles.featureChipText}>{feat}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Action buttons: Switch Category & Register Category */}
+                  <View style={styles.categoryActionsRow}>
+                    <Pressable
+                      style={[
+                        styles.categorySwitchBtn,
+                        isActive
+                          ? { backgroundColor: cat.color, borderColor: cat.color }
+                          : { backgroundColor: colors.background, borderColor: colors.border },
+                      ]}
+                      onPress={() => switchProviderMode(cat.id)}
+                      accessibilityLabel={`Open ${cat.title} Category`}
+                    >
+                      <Ionicons
+                        name={isActive ? 'radio-button-on' : 'swap-horizontal'}
+                        size={14}
+                        color={isActive ? '#FFFFFF' : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.categorySwitchBtnText,
+                          isActive && { color: '#FFFFFF' },
+                        ]}
+                      >
+                        {isActive ? 'Current View' : `Switch to ${cat.title}`}
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[
+                        styles.categoryRegisterBtn,
+                        { backgroundColor: cat.lightBg, borderColor: cat.borderColor },
+                      ]}
+                      onPress={() => navigation.navigate(cat.registerRoute as any)}
+                      accessibilityLabel={cat.registerText}
+                    >
+                      <Ionicons name="person-add" size={13} color={cat.color} />
+                      <Text style={[styles.categoryRegisterBtnText, { color: cat.color }]}>
+                        {cat.registerText}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={13} color={cat.color} />
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Active Category Operations Header */}
+        <View style={styles.activeCategoryBar}>
+          <View style={[styles.activeCategoryIndicator, { backgroundColor: currentThemeColor }]}>
+            <Ionicons
+              name={
+                providerType === 'hospital'
+                  ? 'business'
+                  : providerType === 'doctor'
+                  ? 'medkit'
+                  : 'flask'
+              }
+              size={13}
+              color="#FFFFFF"
+            />
+          </View>
+          <Text style={styles.activeCategoryBarTitle}>
+            Live Operations & Metrics:{' '}
+            <Text style={{ fontWeight: '800', color: currentThemeColor }}>
+              {providerType.toUpperCase()}
+            </Text>
+          </Text>
         </View>
 
 
@@ -915,55 +1049,179 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16, // full width with 16px side padding
   },
-  // 2. Banner: 12px top margin below the header, full width, rounded corners, no overlap
-  bannerWrapper: {
+  categoriesSection: {
     width: '100%',
     marginTop: 12,
     marginBottom: spacing.md,
   },
-  modeSwitcherCard: {
-    width: '100%',
+  categoriesSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  categoriesSectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  categoriesSectionSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  categoriesGrid: {
+    gap: 10,
+  },
+  categoryCard: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  modeSwitcherHeader: {
+  categoryCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
   },
-  modeSwitcherLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  categoryIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  modeTabsRow: {
+  categoryTitleRow: {
     flexDirection: 'row',
-    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  modeTabBtn: {
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  categorySubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  activePillBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: radius.full,
+  },
+  activePillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  categoryBadgePill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+  },
+  categoryBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  categoryFeaturesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  featureChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  featureDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  featureChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  categoryActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  categorySwitchBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: radius.md,
-    backgroundColor: colors.background,
+    gap: 5,
     borderWidth: 1,
-    borderColor: colors.borderLight,
   },
-  modeTabText: {
-    fontSize: 10,
+  categorySwitchBtnText: {
+    fontSize: 11,
     fontWeight: '700',
     color: colors.textSecondary,
   },
-  modeTabTextActive: {
-    color: '#FFFFFF',
+  categoryRegisterBtn: {
+    flex: 1.15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    gap: 4,
+    borderWidth: 1,
+  },
+  categoryRegisterBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  activeCategoryBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 9,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: 8,
+  },
+  activeCategoryIndicator: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeCategoryBarTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
   },
   statsGrid: {
     gap: spacing.sm,
