@@ -41,7 +41,7 @@ export default function MainTabs() {
 
   return (
     <Tab.Navigator
-      initialRouteName="Register"
+      initialRouteName="Home"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
