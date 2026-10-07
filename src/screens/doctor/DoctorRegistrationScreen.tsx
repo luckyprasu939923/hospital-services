@@ -92,7 +92,17 @@ const STEPS = [
 
 type DoctorRegistrationRouteProp = RouteProp<RootStackParamList, 'DoctorRegistration'>;
 
-export default function DoctorRegistrationScreen() {
+interface DoctorRegistrationProps {
+  embedded?: boolean;
+  onComplete?: () => void;
+  onSwitchToDashboard?: () => void;
+}
+
+export default function DoctorRegistrationScreen({
+  embedded = false,
+  onComplete,
+  onSwitchToDashboard,
+}: DoctorRegistrationProps = {}) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<DoctorRegistrationRouteProp>();
@@ -296,6 +306,7 @@ export default function DoctorRegistrationScreen() {
 
     switchProviderMode('doctor');
     setIsRegistered(true);
+    onComplete?.();
 
     Alert.alert(
       'Doctor Registration Complete! 🩺',
@@ -304,12 +315,15 @@ export default function DoctorRegistrationScreen() {
     );
   };
 
+  const ContainerComponent = embedded ? View : SafeAreaView;
+  const containerProps = embedded ? { style: styles.safe } : { style: styles.safe, edges: ['top'] as const };
+
   // If already registered, render the Doctor Service Dashboard right here!
   if (isRegistered) {
     const selectedOptionObj = DOCTOR_PRACTICE_OPTIONS.find((o) => o.id === doctorOption);
 
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <ContainerComponent {...(containerProps as any)}>
         {/* Doctor Dashboard Header */}
         <View style={styles.topHeader}>
           <Pressable
@@ -318,11 +332,11 @@ export default function DoctorRegistrationScreen() {
             accessibilityLabel="Edit Doctor Registration"
             hitSlop={8}
           >
-            <Ionicons name="settings-outline" size={18} color={colors.text} />
+            <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
           </Pressable>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="medkit" size={18} color="#2563EB" />
+              <Ionicons name="medkit" size={18} color="#60A5FA" />
               <Text style={styles.headerTitle} numberOfLines={1}>{name}</Text>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -357,7 +371,7 @@ export default function DoctorRegistrationScreen() {
               </View>
             </View>
 
-            {/* Fully Accessible Online / Offline Toggle Button */}
+            {/* Fully Accessible Online / Offline Toggle Button (Silent: No Notification Alert) */}
             <View style={styles.onlineToggleRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.onlineToggleTitle}>Consultation Availability</Text>
@@ -378,11 +392,6 @@ export default function DoctorRegistrationScreen() {
                 ]}
                 onPress={() => {
                   toggleOnlineAvailability();
-                  Alert.alert(
-                    'Doctor Status Updated',
-                    `Availability is now ${!provider.isOnline ? 'ONLINE' : 'OFFLINE'}.`,
-                    [{ text: 'OK' }],
-                  );
                 }}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: provider.isOnline }}
@@ -517,46 +526,48 @@ export default function DoctorRegistrationScreen() {
             </View>
           </Card>
         </ScrollView>
-      </SafeAreaView>
+      </ContainerComponent>
     );
   }
 
   // Active Step Registration Form
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <ContainerComponent {...(containerProps as any)}>
       {/* Top Header */}
-      <View style={styles.topHeader}>
-        <Pressable
-          style={styles.backBtn}
-          onPress={() => {
-            if (currentStep > 1) {
-              handlePrevStep();
-            } else if (navigation.canGoBack()) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', { screen: 'Home' } as any);
-            }
-          }}
-          accessibilityLabel={currentStep > 1 ? `Back to Step ${currentStep - 1}` : 'Back'}
-          hitSlop={8}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.text} />
-        </Pressable>
+      {!embedded && (
+        <View style={styles.topHeader}>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => {
+              if (currentStep > 1) {
+                handlePrevStep();
+              } else if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate('Main', { screen: 'Home' } as any);
+              }
+            }}
+            accessibilityLabel={currentStep > 1 ? `Back to Step ${currentStep - 1}` : 'Back'}
+            hitSlop={8}
+          >
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </Pressable>
 
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="medkit" size={17} color="#2563EB" />
-            <Text style={styles.headerTitle}>Doctor Registration</Text>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="medkit" size={17} color="#60A5FA" />
+              <Text style={styles.headerTitle}>Doctor Registration</Text>
+            </View>
+            <Text style={styles.headerSubtitle}>
+              Step {currentStep} of 5: {STEPS[currentStep - 1]?.title}
+            </Text>
           </View>
-          <Text style={styles.headerSubtitle}>
-            Step {currentStep} of 5: {STEPS[currentStep - 1]?.title}
-          </Text>
-        </View>
 
-        <View style={styles.stepBadgePill}>
-          <Text style={styles.stepBadgeText}>Step {currentStep}/5</Text>
+          <View style={styles.stepBadgePill}>
+            <Text style={styles.stepBadgeText}>Step {currentStep}/5</Text>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Step Progress Tracker with Ticks / Checkmarks */}
       <View style={styles.progressTrackerContainer}>
@@ -1265,14 +1276,14 @@ export default function DoctorRegistrationScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ContainerComponent>
   );
 }
 
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
   },
   topHeader: {
     flexDirection: 'row',
@@ -1280,15 +1291,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
     minHeight: 56,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#0F172A',
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#1E293B',
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: radius.md,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#1E293B',
     borderWidth: 1,
     borderColor: '#334155',
     alignItems: 'center',
@@ -1298,7 +1309,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: 11,
@@ -1331,11 +1342,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   progressTrackerContainer: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#E2E8F0',
   },
   trackerRow: {
     flexDirection: 'row',
@@ -1351,7 +1362,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#16A34A',
   },
   trackerLinePending: {
-    backgroundColor: '#334155',
+    backgroundColor: '#E2E8F0',
   },
   stepItemWrap: {
     alignItems: 'center',
@@ -1371,11 +1382,11 @@ const styles = StyleSheet.create({
   },
   stepCircleCurrent: {
     backgroundColor: '#2563EB',
-    borderColor: '#60A5FA',
+    borderColor: '#BFDBFE',
   },
   stepCirclePending: {
-    backgroundColor: '#0F172A',
-    borderColor: '#334155',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
   },
   stepNumberText: {
     fontSize: 11,
@@ -1398,22 +1409,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   stepLabelCurrent: {
-    color: '#F8FAFC',
+    color: '#2563EB',
     fontWeight: '800',
   },
   stepLabelPending: {
     color: '#64748B',
   },
   scrollContent: {
-    backgroundColor: '#0B1120',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     gap: spacing.md,
   },
   bannerCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#BFDBFE',
     borderWidth: 1,
+    borderRadius: radius.lg,
   },
   bannerRow: {
     flexDirection: 'row',
@@ -1430,7 +1442,7 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   doctorTag: {
     backgroundColor: '#2563EB',
@@ -1445,7 +1457,7 @@ const styles = StyleSheet.create({
   },
   bannerSubtitle: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 4,
     lineHeight: 17,
   },
@@ -1458,30 +1470,35 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   formCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
     borderRadius: radius.lg,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: '#334155',
     marginBottom: 6,
     marginTop: spacing.sm,
   },
   textInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     borderRadius: radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   inputRow: {
     flexDirection: 'row',
@@ -1494,24 +1511,24 @@ const styles = StyleSheet.create({
   doctorOptionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     padding: 12,
     borderRadius: radius.md,
   },
   doctorOptionCardActive: {
-    backgroundColor: '#172554',
+    backgroundColor: '#EFF6FF',
     borderColor: '#2563EB',
     borderWidth: 1.5,
   },
   doctorOptionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   doctorOptionTitleActive: {
-    color: '#93C5FD',
+    color: '#1D4ED8',
   },
   doctorOptionSub: {
     fontSize: 11,
@@ -1522,9 +1539,9 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   typeChip: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: radius.full,
@@ -1537,7 +1554,7 @@ const styles = StyleSheet.create({
   typeChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: '#475569',
   },
   typeChipTextActive: {
     color: '#FFFFFF',
@@ -1552,7 +1569,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     marginRight: 10,
     borderWidth: 2,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     position: 'relative',
   },
   avatarChoiceSelected: {
@@ -1583,9 +1600,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     borderRadius: radius.sm,
   },
   dayChipActive: {
@@ -1595,7 +1612,7 @@ const styles = StyleSheet.create({
   dayChipText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: '#475569',
   },
   dayChipTextActive: {
     color: '#FFFFFF',
@@ -1605,8 +1622,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#172554',
-    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
     borderWidth: 1,
     padding: 10,
     borderRadius: radius.md,
@@ -1615,7 +1632,7 @@ const styles = StyleSheet.create({
   infoBannerText: {
     flex: 1,
     fontSize: 11,
-    color: '#BFDBFE',
+    color: '#1D4ED8',
     lineHeight: 16,
   },
   docBackHeader: {
@@ -1625,7 +1642,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#EFF6FF',
     borderColor: '#2563EB',
     borderWidth: 1,
     paddingHorizontal: 12,
@@ -1636,19 +1653,19 @@ const styles = StyleSheet.create({
   docBackBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#93C5FD',
+    color: '#2563EB',
   },
   uploadSectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
     marginBottom: 6,
   },
   docUploadBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderColor: '#334155',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
     borderWidth: 1,
     borderRadius: radius.md,
     padding: 12,
@@ -1657,25 +1674,25 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#172554',
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   docUploadTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   docUploadFilename: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   verifiedDocPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#052E16',
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radius.xs,
@@ -1685,7 +1702,7 @@ const styles = StyleSheet.create({
   verifiedDocPillText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#86EFAC',
+    color: '#15803D',
   },
   uploadBtn: {
     backgroundColor: '#2563EB',
@@ -1699,9 +1716,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   declarationCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
+    borderRadius: radius.lg,
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -1721,7 +1739,7 @@ const styles = StyleSheet.create({
   declarationText: {
     flex: 1,
     fontSize: 12,
-    color: '#CBD5E1',
+    color: '#334155',
     lineHeight: 17,
   },
   stepBtnRow: {
@@ -1750,9 +1768,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: radius.md,
@@ -1760,12 +1778,13 @@ const styles = StyleSheet.create({
   secondaryStepBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: '#334155',
   },
   dashboardHeroCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#2563EB',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#BFDBFE',
     borderWidth: 1.5,
+    borderRadius: radius.lg,
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -1781,7 +1800,7 @@ const styles = StyleSheet.create({
   heroDoctorName: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   doctorOptionTag: {
     backgroundColor: '#2563EB',
@@ -1798,21 +1817,21 @@ const styles = StyleSheet.create({
   },
   heroSubText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   heroCouncilText: {
     fontSize: 10,
-    color: '#60A5FA',
+    color: '#2563EB',
     marginTop: 1,
   },
   onlineToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     padding: 12,
     borderRadius: radius.md,
     marginTop: spacing.md,
@@ -1821,7 +1840,7 @@ const styles = StyleSheet.create({
   onlineToggleTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   onlineToggleSub: {
     fontSize: 10,
@@ -1852,22 +1871,27 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     borderRadius: radius.md,
     paddingVertical: 12,
     alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   statNumber: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
     marginTop: 4,
   },
   statLabel: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   actionGrid: {
@@ -1877,11 +1901,16 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: '48%',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     borderRadius: radius.lg,
     padding: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 2,
   },
   actionIconWrap: {
     width: 38,
@@ -1894,11 +1923,11 @@ const styles = StyleSheet.create({
   actionCardTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   actionCardSub: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
     lineHeight: 14,
   },
@@ -1914,14 +1943,15 @@ const styles = StyleSheet.create({
     color: '#2563EB',
   },
   summaryCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
+    borderRadius: radius.lg,
   },
   summaryCardHeading: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
     marginBottom: spacing.xs,
   },
   summaryRow: {
@@ -1929,18 +1959,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#E2E8F0',
     gap: 8,
   },
   summaryLabel: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     minWidth: 100,
   },
   summaryValue: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
     flex: 1,
     textAlign: 'right',
   },

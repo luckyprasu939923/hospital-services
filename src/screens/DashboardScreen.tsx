@@ -19,6 +19,9 @@ import Card from '../components/Card';
 import StatCard from '../components/StatCard';
 import { RootStackParamList } from '../navigation/types';
 import { ProviderType } from '../types';
+import HospitalRegistrationScreen from './hospital/HospitalRegistrationScreen';
+import DoctorRegistrationScreen from './doctor/DoctorRegistrationScreen';
+import PharmacyRegistrationScreen from './pharmacy/PharmacyRegistrationScreen';
 
 const HEALTHCARE_CATEGORIES = [
   {
@@ -80,6 +83,10 @@ export default function DashboardScreen() {
     acceptOPBooking,
     acceptHomeVisit,
   } = useApp();
+
+  // Front-page view mode: 'register' opens directly on the first page itself as requested!
+  const [pageMode, setPageMode] = useState<'register' | 'dashboard'>('register');
+  const [registrationCategory, setRegistrationCategory] = useState<ProviderType>('hospital');
 
   // Auto-refresh timer: periodic refresh every 120 seconds (updated from 60 seconds)
   const REFRESH_INTERVAL_SECONDS = 120;
@@ -219,11 +226,6 @@ export default function DashboardScreen() {
                 ]}
                 onPress={() => {
                   toggleOnlineAvailability();
-                  Alert.alert(
-                    'Status Updated',
-                    `You are now ${!provider.isOnline ? 'ONLINE and accepting bookings' : 'OFFLINE (new requests paused)'}.`,
-                    [{ text: 'OK' }],
-                  );
                 }}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: provider.isOnline }}
@@ -272,12 +274,167 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* 3. Bottom cut-off: Scrollable content with bottom padding equal to bottom navigation height + 16px */}
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: bottomPadding },
-        ]}
+      {/* Top Primary Mode Bar: Switch seamlessly between Registration & Live Operations */}
+      <View style={styles.topModeBar}>
+        <Pressable
+          style={[
+            styles.modeSegmentBtn,
+            pageMode === 'register' && styles.modeSegmentBtnActive,
+          ]}
+          onPress={() => setPageMode('register')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: pageMode === 'register' }}
+        >
+          <Ionicons
+            name="create-outline"
+            size={15}
+            color={pageMode === 'register' ? '#FFFFFF' : '#94A3B8'}
+          />
+          <Text
+            style={[
+              styles.modeSegmentText,
+              pageMode === 'register' && styles.modeSegmentTextActive,
+            ]}
+          >
+            Provider Registration
+          </Text>
+          {pageMode === 'register' && <View style={styles.activeDot} />}
+        </Pressable>
+
+        <Pressable
+          style={[
+            styles.modeSegmentBtn,
+            pageMode === 'dashboard' && styles.modeSegmentBtnActive,
+          ]}
+          onPress={() => setPageMode('dashboard')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: pageMode === 'dashboard' }}
+        >
+          <Ionicons
+            name="speedometer-outline"
+            size={15}
+            color={pageMode === 'dashboard' ? '#FFFFFF' : '#94A3B8'}
+          />
+          <Text
+            style={[
+              styles.modeSegmentText,
+              pageMode === 'dashboard' && styles.modeSegmentTextActive,
+            ]}
+          >
+            Live Operations
+          </Text>
+          {pageMode === 'dashboard' && <View style={styles.activeDot} />}
+        </Pressable>
+      </View>
+
+      {/* Direct Registration Portal on First Page */}
+      {pageMode === 'register' ? (
+        <View style={styles.registrationContainer}>
+          {/* 3 Healthcare Categories Selector Pills */}
+          <View style={styles.registrationCategoryBar}>
+            <Pressable
+              style={[
+                styles.regCatPill,
+                registrationCategory === 'hospital' && styles.regCatPillHospitalActive,
+              ]}
+              onPress={() => setRegistrationCategory('hospital')}
+            >
+              <Ionicons
+                name="business"
+                size={15}
+                color={registrationCategory === 'hospital' ? '#DC2626' : '#64748B'}
+              />
+              <Text
+                style={[
+                  styles.regCatPillText,
+                  registrationCategory === 'hospital' && styles.regCatPillHospitalTextActive,
+                ]}
+              >
+                Hospital
+              </Text>
+              {registrationCategory === 'hospital' && (
+                <View style={styles.regCatIndicatorHospital} />
+              )}
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.regCatPill,
+                registrationCategory === 'pharmacy' && styles.regCatPillPharmacyActive,
+              ]}
+              onPress={() => setRegistrationCategory('pharmacy')}
+            >
+              <Ionicons
+                name="flask"
+                size={15}
+                color={registrationCategory === 'pharmacy' ? '#0D9488' : '#64748B'}
+              />
+              <Text
+                style={[
+                  styles.regCatPillText,
+                  registrationCategory === 'pharmacy' && styles.regCatPillPharmacyTextActive,
+                ]}
+              >
+                Pharmacy
+              </Text>
+              {registrationCategory === 'pharmacy' && (
+                <View style={styles.regCatIndicatorPharmacy} />
+              )}
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.regCatPill,
+                registrationCategory === 'doctor' && styles.regCatPillDoctorActive,
+              ]}
+              onPress={() => setRegistrationCategory('doctor')}
+            >
+              <Ionicons
+                name="medkit"
+                size={15}
+                color={registrationCategory === 'doctor' ? '#2563EB' : '#64748B'}
+              />
+              <Text
+                style={[
+                  styles.regCatPillText,
+                  registrationCategory === 'doctor' && styles.regCatPillDoctorTextActive,
+                ]}
+              >
+                Doctor
+              </Text>
+              {registrationCategory === 'doctor' && (
+                <View style={styles.regCatIndicatorDoctor} />
+              )}
+            </Pressable>
+          </View>
+
+          {/* Embedded Full Registration Form */}
+          {registrationCategory === 'hospital' && (
+            <HospitalRegistrationScreen
+              embedded
+              onSwitchToDashboard={() => setPageMode('dashboard')}
+            />
+          )}
+          {registrationCategory === 'pharmacy' && (
+            <PharmacyRegistrationScreen
+              embedded
+              onSwitchToDashboard={() => setPageMode('dashboard')}
+            />
+          )}
+          {registrationCategory === 'doctor' && (
+            <DoctorRegistrationScreen
+              embedded
+              onSwitchToDashboard={() => setPageMode('dashboard')}
+            />
+          )}
+        </View>
+      ) : (
+        /* 3. Bottom cut-off: Scrollable content with bottom padding equal to bottom navigation height + 16px */
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: bottomPadding },
+          ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -390,7 +547,10 @@ export default function DashboardScreen() {
                         styles.categoryRegisterBtn,
                         { backgroundColor: cat.lightBg, borderColor: cat.borderColor },
                       ]}
-                      onPress={() => navigation.navigate(cat.registerRoute as any)}
+                      onPress={() => {
+                        setRegistrationCategory(cat.id);
+                        setPageMode('register');
+                      }}
                       accessibilityLabel={cat.registerText}
                     >
                       <Ionicons name="person-add" size={13} color={cat.color} />
@@ -931,7 +1091,8 @@ export default function DashboardScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -951,6 +1112,125 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+  },
+  // Top Primary Mode Bar
+  topModeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+  },
+  modeSegmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    position: 'relative',
+  },
+  modeSegmentBtnActive: {
+    backgroundColor: colors.primary,
+  },
+  modeSegmentText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  modeSegmentTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  activeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#FFFFFF',
+    marginLeft: 2,
+  },
+  // Registration Portal Container & Category Switcher Bar
+  registrationContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  registrationCategoryBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  regCatPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    position: 'relative',
+  },
+  regCatPillHospitalActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#DC2626',
+  },
+  regCatPillPharmacyActive: {
+    backgroundColor: '#F0FDFA',
+    borderColor: '#0D9488',
+  },
+  regCatPillDoctorActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#2563EB',
+  },
+  regCatPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  regCatPillHospitalTextActive: {
+    color: '#DC2626',
+    fontWeight: '800',
+  },
+  regCatPillPharmacyTextActive: {
+    color: '#0D9488',
+    fontWeight: '800',
+  },
+  regCatPillDoctorTextActive: {
+    color: '#2563EB',
+    fontWeight: '800',
+  },
+  regCatIndicatorHospital: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#DC2626',
+    marginLeft: 2,
+  },
+  regCatIndicatorPharmacy: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#0D9488',
+    marginLeft: 2,
+  },
+  regCatIndicatorDoctor: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#2563EB',
+    marginLeft: 2,
   },
   providerInfo: {
     flexDirection: 'row',

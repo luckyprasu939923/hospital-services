@@ -43,7 +43,17 @@ const STEPS = [
   { id: 5, title: 'Bank & Legal', icon: 'checkmark-done-circle' as const },
 ];
 
-export default function PharmacyRegistrationScreen() {
+interface PharmacyRegistrationProps {
+  embedded?: boolean;
+  onComplete?: () => void;
+  onSwitchToDashboard?: () => void;
+}
+
+export default function PharmacyRegistrationScreen({
+  embedded = false,
+  onComplete,
+  onSwitchToDashboard,
+}: PharmacyRegistrationProps = {}) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { provider, registerProvider, switchProviderMode, toggleOnlineAvailability } = useApp();
@@ -172,6 +182,7 @@ export default function PharmacyRegistrationScreen() {
 
     switchProviderMode('pharmacy');
     setIsRegistered(true);
+    onComplete?.();
 
     Alert.alert(
       'Pharmacy Registration Complete! 💊',
@@ -180,10 +191,13 @@ export default function PharmacyRegistrationScreen() {
     );
   };
 
+  const ContainerComponent = embedded ? View : SafeAreaView;
+  const containerProps = embedded ? { style: styles.safe } : { style: styles.safe, edges: ['top'] as const };
+
   // If already registered, render the Pharmacy Service Dashboard right here!
   if (isRegistered) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <ContainerComponent {...(containerProps as any)}>
         {/* Pharmacy Dashboard Header */}
         <View style={styles.topHeader}>
           <Pressable
@@ -192,11 +206,11 @@ export default function PharmacyRegistrationScreen() {
             accessibilityLabel="Edit Pharmacy Registration"
             hitSlop={8}
           >
-            <Ionicons name="settings-outline" size={18} color={colors.text} />
+            <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
           </Pressable>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="flask" size={18} color="#0D9488" />
+              <Ionicons name="flask" size={18} color="#2DD4BF" />
               <Text style={styles.headerTitle} numberOfLines={1}>{storeName}</Text>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -217,7 +231,7 @@ export default function PharmacyRegistrationScreen() {
           <Card style={styles.dashboardHeroCard} padding="lg">
             <View style={styles.heroTopRow}>
               <View style={styles.heroIconBadge}>
-                <Ionicons name="flask" size={28} color="#FFFFFF" />
+                <Ionicons name="flask" size={26} color="#FFFFFF" />
               </View>
               <View style={{ flex: 1, marginLeft: spacing.md }}>
                 <Text style={styles.heroStoreName} numberOfLines={1}>{storeName}</Text>
@@ -231,7 +245,7 @@ export default function PharmacyRegistrationScreen() {
               </View>
             </View>
 
-            {/* Fully Accessible Online / Offline Toggle Button */}
+            {/* Fully Accessible Online / Offline Toggle Button (Silent: No Notification Alert) */}
             <View style={styles.onlineToggleRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.onlineToggleTitle}>Prescription Delivery Status</Text>
@@ -252,11 +266,6 @@ export default function PharmacyRegistrationScreen() {
                 ]}
                 onPress={() => {
                   toggleOnlineAvailability();
-                  Alert.alert(
-                    'Pharmacy Status Updated',
-                    `Store is now ${!provider.isOnline ? 'ONLINE' : 'OFFLINE'}.`,
-                    [{ text: 'OK' }],
-                  );
                 }}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: provider.isOnline }}
@@ -391,46 +400,48 @@ export default function PharmacyRegistrationScreen() {
             </View>
           </Card>
         </ScrollView>
-      </SafeAreaView>
+      </ContainerComponent>
     );
   }
 
   // Active Step Registration Form
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <ContainerComponent {...(containerProps as any)}>
       {/* Top Header */}
-      <View style={styles.topHeader}>
-        <Pressable
-          style={styles.backBtn}
-          onPress={() => {
-            if (currentStep > 1) {
-              handlePrevStep();
-            } else if (navigation.canGoBack()) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', { screen: 'Home' } as any);
-            }
-          }}
-          accessibilityLabel={currentStep > 1 ? `Back to Step ${currentStep - 1}` : 'Back'}
-          hitSlop={8}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.text} />
-        </Pressable>
+      {!embedded && (
+        <View style={styles.topHeader}>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => {
+              if (currentStep > 1) {
+                handlePrevStep();
+              } else if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate('Main', { screen: 'Home' } as any);
+              }
+            }}
+            accessibilityLabel={currentStep > 1 ? `Back to Step ${currentStep - 1}` : 'Back'}
+            hitSlop={8}
+          >
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </Pressable>
 
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="flask" size={17} color="#0D9488" />
-            <Text style={styles.headerTitle}>Pharmacy Registration</Text>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="flask" size={17} color="#2DD4BF" />
+              <Text style={styles.headerTitle}>Pharmacy Registration</Text>
+            </View>
+            <Text style={styles.headerSubtitle}>
+              Step {currentStep} of 5: {STEPS[currentStep - 1]?.title}
+            </Text>
           </View>
-          <Text style={styles.headerSubtitle}>
-            Step {currentStep} of 5: {STEPS[currentStep - 1]?.title}
-          </Text>
-        </View>
 
-        <View style={styles.stepBadgePill}>
-          <Text style={styles.stepBadgeText}>Step {currentStep}/5</Text>
+          <View style={styles.stepBadgePill}>
+            <Text style={styles.stepBadgeText}>Step {currentStep}/5</Text>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Step Progress Tracker with Ticks / Checkmarks */}
       <View style={styles.progressTrackerContainer}>
@@ -1075,14 +1086,14 @@ export default function PharmacyRegistrationScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ContainerComponent>
   );
 }
 
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
   },
   topHeader: {
     flexDirection: 'row',
@@ -1090,15 +1101,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
     minHeight: 56,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#0F172A',
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#1E293B',
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: radius.md,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#1E293B',
     borderWidth: 1,
     borderColor: '#334155',
     alignItems: 'center',
@@ -1108,7 +1119,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: 11,
@@ -1141,11 +1152,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   progressTrackerContainer: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#E2E8F0',
   },
   trackerRow: {
     flexDirection: 'row',
@@ -1161,7 +1172,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#16A34A',
   },
   trackerLinePending: {
-    backgroundColor: '#334155',
+    backgroundColor: '#E2E8F0',
   },
   stepItemWrap: {
     alignItems: 'center',
@@ -1181,11 +1192,11 @@ const styles = StyleSheet.create({
   },
   stepCircleCurrent: {
     backgroundColor: '#0D9488',
-    borderColor: '#2DD4BF',
+    borderColor: '#99F6E4',
   },
   stepCirclePending: {
-    backgroundColor: '#0F172A',
-    borderColor: '#334155',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
   },
   stepNumberText: {
     fontSize: 11,
@@ -1208,22 +1219,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   stepLabelCurrent: {
-    color: '#F8FAFC',
+    color: '#0D9488',
     fontWeight: '800',
   },
   stepLabelPending: {
     color: '#64748B',
   },
   scrollContent: {
-    backgroundColor: '#0B1120',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     gap: spacing.md,
   },
   bannerCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#99F6E4',
     borderWidth: 1,
+    borderRadius: radius.lg,
   },
   bannerRow: {
     flexDirection: 'row',
@@ -1240,7 +1252,7 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   pharmacyTag: {
     backgroundColor: '#0D9488',
@@ -1255,7 +1267,7 @@ const styles = StyleSheet.create({
   },
   bannerSubtitle: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 4,
     lineHeight: 17,
   },
@@ -1268,30 +1280,35 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   formCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
     borderRadius: radius.lg,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: '#334155',
     marginBottom: 6,
     marginTop: spacing.sm,
   },
   textInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     borderRadius: radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   inputRow: {
     flexDirection: 'row',
@@ -1301,9 +1318,9 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   typeChip: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: radius.full,
@@ -1316,7 +1333,7 @@ const styles = StyleSheet.create({
   typeChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: '#475569',
   },
   typeChipTextActive: {
     color: '#FFFFFF',
@@ -1329,16 +1346,16 @@ const styles = StyleSheet.create({
   facilityToggleItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     padding: 10,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
   },
   toggleItemTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   toggleItemSub: {
     fontSize: 11,
@@ -1352,7 +1369,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#CCFBF1',
     borderColor: '#0D9488',
     borderWidth: 1,
     paddingHorizontal: 12,
@@ -1363,19 +1380,19 @@ const styles = StyleSheet.create({
   docBackBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5EEAD4',
+    color: '#0D9488',
   },
   uploadSectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
     marginBottom: 6,
   },
   docUploadBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderColor: '#334155',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
     borderWidth: 1,
     borderRadius: radius.md,
     padding: 12,
@@ -1384,25 +1401,25 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#134E4A',
+    backgroundColor: '#CCFBF1',
     alignItems: 'center',
     justifyContent: 'center',
   },
   docUploadTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   docUploadFilename: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   verifiedDocPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#052E16',
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radius.xs,
@@ -1412,7 +1429,7 @@ const styles = StyleSheet.create({
   verifiedDocPillText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#86EFAC',
+    color: '#15803D',
   },
   uploadBtn: {
     backgroundColor: '#0D9488',
@@ -1426,9 +1443,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   declarationCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
+    borderRadius: radius.lg,
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -1448,7 +1466,7 @@ const styles = StyleSheet.create({
   declarationText: {
     flex: 1,
     fontSize: 12,
-    color: '#CBD5E1',
+    color: '#334155',
     lineHeight: 17,
   },
   stepBtnRow: {
@@ -1477,9 +1495,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: radius.md,
@@ -1487,12 +1505,13 @@ const styles = StyleSheet.create({
   secondaryStepBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: '#334155',
   },
   dashboardHeroCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#0D9488',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#99F6E4',
     borderWidth: 1.5,
+    borderRadius: radius.lg,
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -1509,25 +1528,25 @@ const styles = StyleSheet.create({
   heroStoreName: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   heroSubText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   heroLicenseText: {
     fontSize: 10,
-    color: '#5EEAD4',
+    color: '#0D9488',
     marginTop: 1,
   },
   onlineToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     padding: 12,
     borderRadius: radius.md,
     marginTop: spacing.md,
@@ -1536,7 +1555,7 @@ const styles = StyleSheet.create({
   onlineToggleTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   onlineToggleSub: {
     fontSize: 10,
@@ -1567,22 +1586,27 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     borderRadius: radius.md,
     paddingVertical: 12,
     alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   statNumber: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
     marginTop: 4,
   },
   statLabel: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   actionGrid: {
@@ -1592,11 +1616,16 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: '48%',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     borderRadius: radius.lg,
     padding: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 2,
   },
   actionIconWrap: {
     width: 38,
@@ -1609,11 +1638,11 @@ const styles = StyleSheet.create({
   actionCardTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   actionCardSub: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
     lineHeight: 14,
   },
@@ -1629,14 +1658,15 @@ const styles = StyleSheet.create({
     color: '#0D9488',
   },
   summaryCard: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
+    borderRadius: radius.lg,
   },
   summaryCardHeading: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
     marginBottom: spacing.xs,
   },
   summaryRow: {
@@ -1644,18 +1674,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#E2E8F0',
     gap: 8,
   },
   summaryLabel: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     minWidth: 100,
   },
   summaryValue: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
     flex: 1,
     textAlign: 'right',
   },
