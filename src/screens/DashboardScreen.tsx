@@ -306,7 +306,7 @@ export default function DashboardScreen() {
             {HEALTHCARE_CATEGORIES.map((cat) => {
               const isActive = providerType === cat.id;
               return (
-                <View
+                <Pressable
                   key={cat.id}
                   style={[
                     styles.categoryCard,
@@ -320,6 +320,10 @@ export default function DashboardScreen() {
                       elevation: 4,
                     },
                   ]}
+                  onPress={() => switchProviderMode(cat.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={`Select and activate ${cat.title} healthcare block`}
                 >
                   <View style={styles.categoryCardHeader}>
                     <View style={[styles.categoryIconWrap, { backgroundColor: cat.lightBg }]}>
@@ -359,7 +363,7 @@ export default function DashboardScreen() {
 
                   {/* Action button: Switch Category in Live Operation */}
                   <View style={styles.categoryActionsRow}>
-                    <Pressable
+                    <View
                       style={[
                         styles.categorySwitchBtn,
                         { flex: 1 },
@@ -367,8 +371,6 @@ export default function DashboardScreen() {
                           ? { backgroundColor: cat.color, borderColor: cat.color }
                           : { backgroundColor: colors.background, borderColor: colors.border },
                       ]}
-                      onPress={() => switchProviderMode(cat.id)}
-                      accessibilityLabel={`Switch Live View to ${cat.title}`}
                     >
                       <Ionicons
                         name={isActive ? 'radio-button-on' : 'swap-horizontal'}
@@ -381,11 +383,11 @@ export default function DashboardScreen() {
                           isActive && { color: '#FFFFFF', fontWeight: '800' },
                         ]}
                       >
-                        {isActive ? `Current Live View: ${cat.title}` : `Switch Live View to ${cat.title}`}
+                        {isActive ? `Current Live View: ${cat.title}` : `Tap Block to Activate ${cat.title}`}
                       </Text>
-                    </Pressable>
+                    </View>
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </View>

@@ -160,6 +160,7 @@ export default function RegistrationPortalScreen() {
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
               accessibilityLabel={`Select ${cat.title} Registration`}
+              hitSlop={8}
             >
               <Ionicons
                 name={cat.icon}

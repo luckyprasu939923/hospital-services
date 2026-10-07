@@ -90,13 +90,16 @@ export default function AuthScreen() {
         {/* 3 Dedicated Category Registration Cards */}
         <View style={styles.categoryCardsList}>
           {REGISTRATION_CATEGORIES.map((cat) => (
-            <Card
+            <Pressable
               key={cat.id}
               style={[
                 styles.categoryCard,
                 { borderColor: cat.borderColor, shadowColor: cat.color },
               ]}
-              padding="lg"
+              onPress={() => navigation.navigate(cat.route as any)}
+              accessibilityRole="button"
+              accessibilityLabel={`Register ${cat.title}`}
+              hitSlop={8}
             >
               <View style={styles.cardHeaderRow}>
                 <View style={[styles.cardIconWrap, { backgroundColor: cat.lightBg }]}>
@@ -126,16 +129,13 @@ export default function AuthScreen() {
               </View>
 
               {/* Action Button */}
-              <Pressable
+              <View
                 style={[styles.registerActionBtn, { backgroundColor: cat.color }]}
-                onPress={() => navigation.navigate(cat.route as any)}
-                accessibilityLabel={cat.btnText}
-                hitSlop={8}
               >
                 <Text style={styles.registerActionBtnText}>{cat.btnText}</Text>
                 <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-              </Pressable>
-            </Card>
+              </View>
+            </Pressable>
           ))}
         </View>
 
@@ -261,6 +261,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: radius.lg,
     borderWidth: 1.5,
+    padding: spacing.lg,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
