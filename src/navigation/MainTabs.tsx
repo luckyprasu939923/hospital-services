@@ -6,6 +6,7 @@ import { colors } from '../theme/colors';
 import { TabParamList } from './types';
 import { useApp } from '../context/AppContext';
 import DashboardScreen from '../screens/DashboardScreen';
+import RegistrationPortalScreen from '../screens/registration/RegistrationPortalScreen';
 import BookingsOrdersScreen from '../screens/bookings/BookingsOrdersScreen';
 import EarningsScreen from '../screens/earnings/EarningsScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
@@ -40,7 +41,7 @@ export default function MainTabs() {
 
   return (
     <Tab.Navigator
-      initialRouteName="Home"
+      initialRouteName="Register"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -66,14 +67,30 @@ export default function MainTabs() {
         },
       }}
     >
+      {/* 1. Dedicated Registration Portal directly on the first page */}
+      <Tab.Screen
+        name="Register"
+        component={RegistrationPortalScreen}
+        options={{
+          tabBarLabel: 'Registration',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'create' : 'create-outline'}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      {/* 2. Live Operations Dashboard */}
       <Tab.Screen
         name="Home"
         component={DashboardScreen}
         options={{
-          tabBarLabel: 'Dashboard',
+          tabBarLabel: 'Live Operations',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'grid' : 'grid-outline'}
+              name={focused ? 'pulse' : 'pulse-outline'}
               size={22}
               color={color}
             />

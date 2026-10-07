@@ -2,6 +2,7 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 import { HospitalDoctor, OnlineConsultation, PharmacyProduct } from '../types';
 
 export type TabParamList = {
+  Register?: { category?: 'hospital' | 'doctor' | 'pharmacy' };
   Home: undefined;
   BookingsOrders: undefined;
   Earnings: undefined;
@@ -11,6 +12,7 @@ export type TabParamList = {
 
 export type RootStackParamList = {
   Main: NavigatorScreenParams<TabParamList> | undefined;
+  Register?: { category?: 'hospital' | 'doctor' | 'pharmacy' };
   Dashboard: undefined;
   Service: undefined;
   Auth: undefined;

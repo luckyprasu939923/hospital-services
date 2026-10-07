@@ -7,6 +7,7 @@ import MainTabs from './MainTabs';
 // Healthcare Provider Stack Screens
 import AuthScreen from '../screens/auth/AuthScreen';
 import RegisterProviderScreen from '../screens/auth/RegisterProviderScreen';
+import RegistrationPortalScreen from '../screens/registration/RegistrationPortalScreen';
 import HospitalRegistrationScreen from '../screens/hospital/HospitalRegistrationScreen';
 import DoctorRegistrationScreen from '../screens/doctor/DoctorRegistrationScreen';
 import PharmacyRegistrationScreen from '../screens/pharmacy/PharmacyRegistrationScreen';
@@ -34,6 +35,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="Dashboard" component={MainTabs} />
       <Stack.Screen name="Service" component={MainTabs} />
+      <Stack.Screen name="Register" component={RegistrationPortalScreen} />
 
       {/* Provider Account / Profile Screen */}
       <Stack.Screen name="Account" component={ProfileScreen} />
