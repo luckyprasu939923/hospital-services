@@ -44,7 +44,7 @@ export default function AuthScreen() {
       return;
     }
     setAuthStep('otp');
-    Alert.alert('OTP Sent', `4-digit verification code sent to +91 ${phone} (Demo Code: 1234)`);
+    Alert.alert('OTP Sent', `4-digit SMS verification code sent to +91 ${phone}`);
   };
 
   const handleVerifyOtp = () => {
@@ -135,14 +135,6 @@ export default function AuthScreen() {
               <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
             </Pressable>
 
-            {/* Quick Demo Bypass */}
-            <Pressable
-              style={styles.demoBypassBtn}
-              onPress={() => navigation.navigate('Main', { screen: 'Home' })}
-            >
-              <Text style={styles.demoBypassText}>Direct Demo Mode (Skip to Dashboard)</Text>
-            </Pressable>
-
             {/* Register New Doctor or Any Healthcare Provider */}
             <View style={styles.registerSection}>
               <View style={styles.dividerRow}>
@@ -213,7 +205,7 @@ export default function AuthScreen() {
           <Card style={styles.formCard} padding="lg">
             <Text style={styles.formTitle}>Verify Mobile OTP</Text>
             <Text style={styles.formSub}>
-              Enter the 4-digit code sent to +91 {phone} (Demo Code: 1234)
+              Enter the 4-digit verification code sent to +91 {phone}
             </Text>
 
             <Text style={styles.inputLabel}>4-Digit Code</Text>
@@ -223,7 +215,7 @@ export default function AuthScreen() {
               maxLength={4}
               value={otp}
               onChangeText={setOtp}
-              placeholder="1234"
+              placeholder="••••"
             />
 
             <Pressable style={styles.primaryBtn} onPress={handleVerifyOtp}>
@@ -233,7 +225,7 @@ export default function AuthScreen() {
 
             <Pressable
               style={styles.resendBtn}
-              onPress={() => Alert.alert('OTP Resent', 'Code 1234 has been resent to your mobile.')}
+              onPress={() => Alert.alert('OTP Resent', `A new verification code has been sent to +91 ${phone}.`)}
             >
               <Text style={styles.resendBtnText}>Resend OTP Code</Text>
             </Pressable>
@@ -358,9 +350,9 @@ export default function AuthScreen() {
             </View>
 
             <View style={styles.adminStatusPreview}>
-              <Ionicons name="time" size={16} color={colors.warning} />
+              <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
               <Text style={styles.adminStatusPreviewText}>
-                Admin Verification: Instant Demo Approval Granted upon submit
+                Official Provider Credentialing: Verification processed via State Health Authority Registry
               </Text>
             </View>
 
@@ -497,17 +489,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: '#FFFFFF',
-  },
-  demoBypassBtn: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-    paddingVertical: 6,
-  },
-  demoBypassText: {
-    fontSize: 12,
-    color: colors.primaryDark,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
   resendBtn: {
     alignItems: 'center',

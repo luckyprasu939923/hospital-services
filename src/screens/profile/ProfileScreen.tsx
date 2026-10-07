@@ -135,9 +135,9 @@ export default function ProfileScreen() {
         {/* Verification & License Details */}
         <Card style={styles.licenseCard} padding="md">
           <View style={styles.licenseHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
               <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
-              <Text style={styles.licenseTitle}>Medical Council & Legal License</Text>
+              <Text style={styles.licenseTitle} numberOfLines={1}>Medical Council & Legal License</Text>
             </View>
             <View
               style={[
@@ -174,19 +174,20 @@ export default function ProfileScreen() {
             <Text style={styles.licenseFieldValue}>{provider.licenseNumber}</Text>
           </View>
 
-          <View style={styles.licenseDataRow}>
+          <View style={[styles.licenseDataRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.licenseFieldLabel}>Document Uploaded:</Text>
             <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '65%', justifyContent: 'flex-end' }}
               onPress={() => {
                 Alert.alert(
                   'Verified Regulatory Document',
                   `Document File: ${provider.licenseDocName}\nStatus: Verified by One Buddy Compliance Team.`,
                 );
               }}
+              accessibilityLabel="View verified document"
             >
               <Ionicons name="document-attach" size={13} color={colors.primary} />
-              <Text style={styles.docLinkText}>{provider.licenseDocName}</Text>
+              <Text style={styles.docLinkText} numberOfLines={1}>{provider.licenseDocName}</Text>
             </Pressable>
           </View>
         </Card>
@@ -608,16 +609,24 @@ const styles = StyleSheet.create({
   licenseDataRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 3,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    gap: 8,
   },
   licenseFieldLabel: {
-    fontSize: 11,
-    color: colors.textMuted,
+    fontSize: 12,
+    color: colors.textSecondary,
+    flex: 1,
+    marginRight: 8,
   },
   licenseFieldValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
+    textAlign: 'right',
+    maxWidth: '65%',
   },
   docLinkText: {
     fontSize: 11,

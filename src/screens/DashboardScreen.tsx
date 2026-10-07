@@ -69,6 +69,7 @@ export default function DashboardScreen() {
     provider,
     providerType,
     switchProviderMode,
+    toggleOnlineAvailability,
     opBookings,
     consultations,
     homeVisits,
@@ -207,15 +208,27 @@ export default function DashboardScreen() {
                 </Text>
               </View>
 
-              {/* Clearly visible Online Status Pill */}
-              <View
+              {/* Fully Accessible Online / Offline Toggle Button */}
+              <Pressable
                 style={[
                   styles.onlineStatusPill,
                   {
-                    backgroundColor: provider.isOnline ? '#DCFCE7' : colors.borderLight,
-                    borderColor: provider.isOnline ? '#86EFAC' : colors.border,
+                    backgroundColor: provider.isOnline ? '#DCFCE7' : '#F1F5F9',
+                    borderColor: provider.isOnline ? '#86EFAC' : '#CBD5E1',
                   },
                 ]}
+                onPress={() => {
+                  toggleOnlineAvailability();
+                  Alert.alert(
+                    'Status Updated',
+                    `You are now ${!provider.isOnline ? 'ONLINE and accepting bookings' : 'OFFLINE (new requests paused)'}.`,
+                    [{ text: 'OK' }],
+                  );
+                }}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: provider.isOnline }}
+                accessibilityLabel={`Healthcare Provider is currently ${provider.isOnline ? 'Online' : 'Offline'}. Tap to toggle availability.`}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <View
                   style={[
@@ -231,7 +244,12 @@ export default function DashboardScreen() {
                 >
                   {provider.isOnline ? 'ONLINE' : 'OFFLINE'}
                 </Text>
-              </View>
+                <Ionicons
+                  name={provider.isOnline ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={12}
+                  color={provider.isOnline ? '#15803D' : colors.textMuted}
+                />
+              </Pressable>
             </View>
           </View>
         </View>

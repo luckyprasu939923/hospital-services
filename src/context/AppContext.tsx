@@ -490,11 +490,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     },
     registerProvider: (data) => {
-      setProvider((prev) => ({
-        ...prev,
-        ...data,
-        approvalStatus: 'approved',
-      }));
+      const targetType = data.type || providerType;
+      setProvider((prev) => {
+        const updated = {
+          ...prev,
+          ...data,
+          type: targetType,
+          approvalStatus: 'approved' as const,
+        };
+        if (targetType === 'hospital') setHospitalProfile(updated);
+        else if (targetType === 'doctor') setDoctorProfile(updated);
+        else if (targetType === 'pharmacy') setPharmacyProfile(updated);
+        return updated;
+      });
+      setProviderType(targetType);
     },
     logout: () => {
       // resets to default hospital

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +22,21 @@ import { RootStackParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
 import { HospitalDoctor } from '../../types';
 
+// Doctor Practice Options / Designations (Required field for Doctor registration)
+const DOCTOR_PRACTICE_OPTIONS = [
+  { id: 'specialist', label: 'Specialist Consultant', sub: 'MD / MS / DNB Certified Specialist' },
+  { id: 'general', label: 'General Physician', sub: 'MBBS Family & Primary Care Physician' },
+  { id: 'surgeon', label: 'Super-Specialist Surgeon', sub: 'MCh / DM / Fellowship Surgeon' },
+  { id: 'telehealth', label: 'Visiting & Telehealth Doctor', sub: 'Remote Digital OPD & Home Consultations' },
+  { id: 'senior_clinic', label: 'Clinic Senior Practitioner', sub: 'Independent Clinical Practice Lead' },
+];
+
+const PRACTICE_MODALITY_OPTIONS = [
+  'OPD Clinic & Video Consults',
+  'In-Clinic OPD Only',
+  'Teleconsultation & Home Visits',
+];
+
 const SPECIALIZATIONS = [
   'General Medicine',
   'Cardiology',
@@ -36,11 +53,11 @@ const SPECIALIZATIONS = [
 ];
 
 const MEDICAL_COUNCILS = [
+  'National Medical Commission (NMC)',
   'Karnataka Medical Council (KMC)',
   'Delhi Medical Council (DMC)',
   'Maharashtra Medical Council (MMC)',
   'Tamil Nadu Medical Council',
-  'National Medical Commission (NMC)',
   'Other State Medical Council',
 ];
 
@@ -65,17 +82,12 @@ const DOCTOR_AVATAR_PRESETS = [
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const COMMON_CONDITIONS = [
-  'Hypertension',
-  'Diabetes Mellitus',
-  'Fever & Viral Cough',
-  'Chest Pain & Angina',
-  'Joint Pain & Arthritis',
-  'Asthma & Allergies',
-  'Headache & Migraine',
-  'Thyroid Disorders',
-  'Acid Reflux & GERD',
-  'Skin Rash & Eczema',
+const STEPS = [
+  { id: 1, title: 'Doctor Option & Profile', icon: 'person' as const },
+  { id: 2, title: 'Council & Credentials', icon: 'shield-checkmark' as const },
+  { id: 3, title: 'Schedule & Fees', icon: 'cash' as const },
+  { id: 4, title: 'Document Upload', icon: 'cloud-upload' as const },
+  { id: 5, title: 'Bank & Ethics', icon: 'checkmark-done-circle' as const },
 ];
 
 type DoctorRegistrationRouteProp = RouteProp<RootStackParamList, 'DoctorRegistration'>;
@@ -84,12 +96,18 @@ export default function DoctorRegistrationScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<DoctorRegistrationRouteProp>();
-  const { provider, addDoctor, updateDoctor, registerProvider, switchProviderMode } = useApp();
+  const { provider, addDoctor, updateDoctor, registerProvider, switchProviderMode, toggleOnlineAvailability } = useApp();
 
   const existingDoctor = route.params?.doctor;
   const isEditing = Boolean(existingDoctor);
 
-  // 1. Personal & Identity
+  // Step Tracker state
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isRegistered, setIsRegistered] = useState<boolean>(false);
+
+  // Step 1: Doctor Practice Option / Field & Personal Identity
+  const [doctorOption, setDoctorOption] = useState<string>(DOCTOR_PRACTICE_OPTIONS[0].id);
+  const [practiceModality, setPracticeModality] = useState<string>(PRACTICE_MODALITY_OPTIONS[0]);
   const [name, setName] = useState(
     existingDoctor?.name || (provider.type === 'doctor' ? provider.name : 'Dr. Rajesh Sharma'),
   );
@@ -100,18 +118,11 @@ export default function DoctorRegistrationScreen() {
     existingDoctor?.gender || 'Male',
   );
   const [phone, setPhone] = useState(
-    existingDoctor?.phone || (provider.type === 'doctor' ? provider.phone.replace('+91 ', '') : '9876543210'),
+    existingDoctor?.phone || (provider.type === 'doctor' ? provider.phone.replace('+91 ', '') : ''),
   );
   const [email, setEmail] = useState(
     existingDoctor?.email || (provider.type === 'doctor' ? provider.email : 'dr.rajesh@onebuddy.health'),
   );
-
-  // 2. Medical Credentials & Council
-  const [councilRegNumber, setCouncilRegNumber] = useState(
-    existingDoctor?.councilRegistrationNumber ||
-      (provider.type === 'doctor' ? provider.licenseNumber : 'MCI-2019-84729'),
-  );
-  const [medicalCouncil, setMedicalCouncil] = useState(MEDICAL_COUNCILS[0]);
   const [specialization, setSpecialization] = useState(
     existingDoctor?.specialization || 'Cardiology',
   );
@@ -122,7 +133,16 @@ export default function DoctorRegistrationScreen() {
     String(existingDoctor?.experience || '12'),
   );
 
-  // 3. Clinic Details & Fees
+  // Step 2: Medical Credentials & Council
+  const [councilRegNumber, setCouncilRegNumber] = useState(
+    existingDoctor?.councilRegistrationNumber ||
+      (provider.type === 'doctor' ? provider.licenseNumber : 'MCI-2019-84729'),
+  );
+  const [medicalCouncil, setMedicalCouncil] = useState(MEDICAL_COUNCILS[0]);
+  const [councilRegYear, setCouncilRegYear] = useState('2014');
+  const [affiliatedHospital, setAffiliatedHospital] = useState('Metro Apex Multi-Specialty Hospital');
+
+  // Step 3: Clinic Details & Fees
   const [clinicName, setClinicName] = useState('Dr. Rajesh Sharma Cardiology Clinic');
   const [clinicAddress, setClinicAddress] = useState('Suite 204, Meditech Plaza, Indiranagar, Bengaluru');
   const [consultationFee, setConsultationFee] = useState(
@@ -135,42 +155,28 @@ export default function DoctorRegistrationScreen() {
   const [slotDuration, setSlotDuration] = useState(
     String(existingDoctor?.slotDurationMinutes || '15'),
   );
-
-  // 4. OPD Schedule
   const [availableDays, setAvailableDays] = useState<string[]>(
-    existingDoctor?.availableDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    existingDoctor?.availableDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
   );
-  const [timeStart, setTimeStart] = useState(
-    existingDoctor?.availableTimeStart || '09:00 AM',
-  );
-  const [timeEnd, setTimeEnd] = useState(
-    existingDoctor?.availableTimeEnd || '05:30 PM',
-  );
+  const [timeStart, setTimeStart] = useState(existingDoctor?.availableTimeStart || '09:00 AM');
+  const [timeEnd, setTimeEnd] = useState(existingDoctor?.availableTimeEnd || '05:00 PM');
+  const [offersHomeVisits, setOffersHomeVisits] = useState(true);
 
-  // 5. Conditions & Bio
-  const [healthIssues, setHealthIssues] = useState(
-    existingDoctor?.healthIssues.join(', ') ||
-      'Hypertension, Diabetes Mellitus, Chest Pain & Angina',
-  );
-  const [bio, setBio] = useState(
-    existingDoctor?.bio ||
-      'Senior consulting cardiologist with extensive experience in non-invasive cardiology, preventive cardiac checkups, and tele-consultation.',
-  );
-
-  // 6. Settlement Bank Details
-  const [bankName, setBankName] = useState('HDFC Bank');
-  const [accountNumber, setAccountNumber] = useState('50100458923412');
-  const [ifscCode, setIfscCode] = useState('HDFC0001234');
-  const [upiId, setUpiId] = useState('dr.rajesh@upi');
-
-  // Document Upload & Ethics Declaration
+  // Step 4: Regulatory Document Uploads
   const [uploadedDoc, setUploadedDoc] = useState('MCI_Council_Registration_Certificate.pdf');
+  const [uploadedDegreeDoc, setUploadedDegreeDoc] = useState('Medical_PostGraduate_Degree.pdf');
+
+  // Step 5: Bank Settlement & Medical Ethics
+  const [bankName, setBankName] = useState('ICICI Bank');
+  const [accountNumber, setAccountNumber] = useState('002105018934');
+  const [ifscCode, setIfscCode] = useState('ICIC0000021');
+  const [upiId, setUpiId] = useState('dr.rajesh@icici');
   const [isDeclared, setIsDeclared] = useState(true);
 
   const toggleDay = (day: string) => {
     if (availableDays.includes(day)) {
       if (availableDays.length === 1) {
-        Alert.alert('Required', 'Doctor must have at least one working day.');
+        Alert.alert('Required', 'Doctor must have at least one consulting day.');
         return;
       }
       setAvailableDays(availableDays.filter((d) => d !== day));
@@ -179,51 +185,64 @@ export default function DoctorRegistrationScreen() {
     }
   };
 
-  const addCondition = (condition: string) => {
-    const list = healthIssues
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (!list.includes(condition)) {
-      list.push(condition);
-      setHealthIssues(list.join(', '));
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      const trimmedName = name.trim();
+      if (!trimmedName || trimmedName === 'Dr.') {
+        Alert.alert('Required Field', 'Please enter doctor full name.');
+        return;
+      }
+      if (!doctorOption) {
+        Alert.alert('Doctor Option Required', 'Please select a Doctor Option / Designation.');
+        return;
+      }
+      if (!specialization.trim() || !qualification.trim()) {
+        Alert.alert('Required Field', 'Please specify medical specialization and qualification.');
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      if (!councilRegNumber.trim()) {
+        Alert.alert('License Required', 'Please enter Medical Council Registration number.');
+        return;
+      }
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      if (!phone.trim() || phone.trim().length < 10) {
+        Alert.alert('Invalid Phone', 'Please enter a valid 10-digit primary mobile number.');
+        return;
+      }
+      if (!clinicAddress.trim()) {
+        Alert.alert('Address Required', 'Please enter clinic or consultation chambers address.');
+        return;
+      }
+      setCurrentStep(4);
+    } else if (currentStep === 4) {
+      if (!uploadedDoc) {
+        Alert.alert('Document Required', 'Please upload Medical Council registration certificate.');
+        return;
+      }
+      setCurrentStep(5);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
   const handleRegisterDoctor = () => {
     const trimmedName = name.trim();
-    if (!trimmedName || trimmedName === 'Dr.') {
-      Alert.alert('Required Field', 'Please enter doctor full name.');
-      return;
-    }
-
-    if (!councilRegNumber.trim()) {
-      Alert.alert('License Required', 'Please enter Medical Council Registration number.');
-      return;
-    }
-
-    if (!qualification.trim()) {
-      Alert.alert('Required Field', 'Please enter doctor medical qualification degrees.');
-      return;
-    }
-
-    if (!phone.trim() || phone.trim().length < 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit primary mobile number.');
-      return;
-    }
-
     if (!isDeclared) {
       Alert.alert(
-        'Regulatory Declaration',
+        'Ethics Declaration Required',
         'Please confirm adherence to Telemedicine Practice Guidelines and Medical Council ethics.',
       );
       return;
     }
 
-    const issuesArray = healthIssues
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const selectedOptionObj = DOCTOR_PRACTICE_OPTIONS.find((o) => o.id === doctorOption);
 
     const doctorData: Omit<HospitalDoctor, 'id' | 'hospitalId'> = {
       name: trimmedName,
@@ -233,7 +252,7 @@ export default function DoctorRegistrationScreen() {
       experience: parseInt(experience, 10) || 10,
       consultationFee: parseInt(consultationFee, 10) || 750,
       onlineConsultationFee: parseInt(onlineFee, 10) || 600,
-      healthIssues: issuesArray.length > 0 ? issuesArray : ['General Medical Consultation'],
+      healthIssues: ['General Consultation', specialization],
       slotDurationMinutes: parseInt(slotDuration, 10) || 15,
       availableDays,
       availableTimeStart: timeStart,
@@ -243,17 +262,16 @@ export default function DoctorRegistrationScreen() {
       phone: phone.trim(),
       email: email.trim(),
       gender,
-      bio: bio.trim(),
+      bio: `${selectedOptionObj?.label || 'Doctor'} practicing ${specialization} with ${experience} years experience.`,
     };
 
-    // Save doctor into roster state
     if (isEditing && existingDoctor) {
       updateDoctor(existingDoctor.id, doctorData);
     } else {
       addDoctor(doctorData);
     }
 
-    // Also update provider profile for doctor mode
+    // Register into provider context
     registerProvider({
       type: 'doctor',
       name: trimmedName,
@@ -277,541 +295,976 @@ export default function DoctorRegistrationScreen() {
     });
 
     switchProviderMode('doctor');
+    setIsRegistered(true);
 
     Alert.alert(
       'Doctor Registration Complete! 🩺',
-      `${trimmedName} is successfully registered on OneBuddy Healthcare Network with verified ${medicalCouncil} credentials.`,
-      [
-        {
-          text: 'Open Doctor Section',
-          onPress: () => {
-            navigation.navigate('Main', { screen: 'Home' } as any);
-          },
-        },
-      ],
+      `${trimmedName} is successfully registered as "${selectedOptionObj?.label}" with active ${medicalCouncil} verification.`,
+      [{ text: 'View Doctor Dashboard' }],
     );
   };
 
+  // If already registered, render the Doctor Service Dashboard right here!
+  if (isRegistered) {
+    const selectedOptionObj = DOCTOR_PRACTICE_OPTIONS.find((o) => o.id === doctorOption);
+
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        {/* Doctor Dashboard Header */}
+        <View style={styles.topHeader}>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => setIsRegistered(false)}
+            accessibilityLabel="Edit Doctor Registration"
+            hitSlop={8}
+          >
+            <Ionicons name="settings-outline" size={18} color={colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="medkit" size={18} color="#2563EB" />
+              <Text style={styles.headerTitle} numberOfLines={1}>{name}</Text>
+            </View>
+            <Text style={styles.headerSubtitle}>
+              Registered Doctor Dashboard • {specialization} • Reg: {councilRegNumber}
+            </Text>
+          </View>
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={13} color="#FFFFFF" />
+            <Text style={styles.verifiedBadgeText}>VERIFIED</Text>
+          </View>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Active Doctor Hero Card */}
+          <Card style={styles.dashboardHeroCard} padding="lg">
+            <View style={styles.heroTopRow}>
+              <Image source={{ uri: photo }} style={styles.heroDoctorAvatar} />
+              <View style={{ flex: 1, marginLeft: spacing.md }}>
+                <Text style={styles.heroDoctorName} numberOfLines={1}>{name}</Text>
+                <View style={styles.doctorOptionTag}>
+                  <Text style={styles.doctorOptionTagText}>
+                    {selectedOptionObj?.label || 'Specialist Consultant'}
+                  </Text>
+                </View>
+                <Text style={styles.heroSubText}>
+                  {specialization} • {qualification} • {experience} yrs exp
+                </Text>
+                <Text style={styles.heroCouncilText}>{medicalCouncil}</Text>
+              </View>
+            </View>
+
+            {/* Fully Accessible Online / Offline Toggle Button */}
+            <View style={styles.onlineToggleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.onlineToggleTitle}>Consultation Availability</Text>
+                <Text style={styles.onlineToggleSub}>
+                  {provider.isOnline
+                    ? 'Online: Accepting video consultations & clinic appointments'
+                    : 'Offline: Patient booking requests paused'}
+                </Text>
+              </View>
+
+              <Pressable
+                style={[
+                  styles.onlineToggleBtn,
+                  {
+                    backgroundColor: provider.isOnline ? '#DCFCE7' : '#F1F5F9',
+                    borderColor: provider.isOnline ? '#86EFAC' : '#CBD5E1',
+                  },
+                ]}
+                onPress={() => {
+                  toggleOnlineAvailability();
+                  Alert.alert(
+                    'Doctor Status Updated',
+                    `Availability is now ${!provider.isOnline ? 'ONLINE' : 'OFFLINE'}.`,
+                    [{ text: 'OK' }],
+                  );
+                }}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: provider.isOnline }}
+                accessibilityLabel={`Doctor availability is ${provider.isOnline ? 'Online' : 'Offline'}. Tap to toggle.`}
+                hitSlop={8}
+              >
+                <View
+                  style={[
+                    styles.onlineDot,
+                    { backgroundColor: provider.isOnline ? '#16A34A' : '#64748B' },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.onlineToggleBtnText,
+                    { color: provider.isOnline ? '#15803D' : '#475569' },
+                  ]}
+                >
+                  {provider.isOnline ? 'ONLINE' : 'OFFLINE'}
+                </Text>
+              </Pressable>
+            </View>
+          </Card>
+
+          {/* Consultation Fee Metrics */}
+          <View style={styles.sectionHeader}>
+            <Ionicons name="cash-outline" size={17} color="#2563EB" />
+            <Text style={styles.sectionTitle}>Consultation Fees & Practice Modalities</Text>
+          </View>
+
+          <View style={styles.statsGrid}>
+            <View style={styles.statBox}>
+              <Ionicons name="videocam" size={20} color="#2563EB" />
+              <Text style={styles.statNumber}>₹{onlineFee}</Text>
+              <Text style={styles.statLabel}>Video Consult</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Ionicons name="business" size={20} color="#0D9488" />
+              <Text style={styles.statNumber}>₹{consultationFee}</Text>
+              <Text style={styles.statLabel}>In-Clinic OPD</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Ionicons name="home" size={20} color="#D97706" />
+              <Text style={styles.statNumber}>₹{homeVisitFee}</Text>
+              <Text style={styles.statLabel}>Home Visit</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Ionicons name="time" size={20} color="#7C3AED" />
+              <Text style={styles.statNumber}>{slotDuration}m</Text>
+              <Text style={styles.statLabel}>Slot Duration</Text>
+            </View>
+          </View>
+
+          {/* Doctor Management Actions */}
+          <View style={styles.sectionHeader}>
+            <Ionicons name="grid-outline" size={17} color="#2563EB" />
+            <Text style={styles.sectionTitle}>Doctor Practice Modules</Text>
+          </View>
+
+          <View style={styles.actionGrid}>
+            <Pressable
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('Main', { screen: 'BookingsOrders' } as any)}
+              accessibilityLabel="View Consultations"
+            >
+              <View style={[styles.actionIconWrap, { backgroundColor: '#DBEAFE' }]}>
+                <Ionicons name="videocam" size={22} color="#2563EB" />
+              </View>
+              <Text style={styles.actionCardTitle}>Video Consults</Text>
+              <Text style={styles.actionCardSub}>Incoming teleconsultation queue</Text>
+              <View style={styles.actionLinkRow}>
+                <Text style={styles.actionLinkText}>Open Queue</Text>
+                <Ionicons name="arrow-forward" size={12} color="#2563EB" />
+              </View>
+            </Pressable>
+
+            <Pressable
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('DoctorHomeVisits')}
+              accessibilityLabel="Manage Home Visits"
+            >
+              <View style={[styles.actionIconWrap, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="car" size={22} color="#D97706" />
+              </View>
+              <Text style={styles.actionCardTitle}>Home Visits Desk</Text>
+              <Text style={styles.actionCardSub}>House-call appointments nearby</Text>
+              <View style={styles.actionLinkRow}>
+                <Text style={[styles.actionLinkText, { color: '#D97706' }]}>Open Visits</Text>
+                <Ionicons name="arrow-forward" size={12} color="#D97706" />
+              </View>
+            </Pressable>
+
+            <Pressable
+              style={styles.actionCard}
+              onPress={() => setIsRegistered(false)}
+              accessibilityLabel="Edit Doctor Profile"
+            >
+              <View style={[styles.actionIconWrap, { backgroundColor: '#F1F5F9' }]}>
+                <Ionicons name="create-outline" size={22} color="#475569" />
+              </View>
+              <Text style={styles.actionCardTitle}>Edit Credentials</Text>
+              <Text style={styles.actionCardSub}>Update fees, schedule & bio</Text>
+              <View style={styles.actionLinkRow}>
+                <Text style={[styles.actionLinkText, { color: '#475569' }]}>Edit Setup</Text>
+                <Ionicons name="arrow-forward" size={12} color="#475569" />
+              </View>
+            </Pressable>
+          </View>
+
+          {/* Practice & Settlement Summary */}
+          <Card style={styles.summaryCard} padding="md">
+            <Text style={styles.summaryCardHeading}>Practice Chambers & Bank Settlement</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Clinic Name:</Text>
+              <Text style={styles.summaryValue}>{clinicName}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Clinic Address:</Text>
+              <Text style={styles.summaryValue}>{clinicAddress}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Schedule Days:</Text>
+              <Text style={styles.summaryValue}>{availableDays.join(', ')} ({timeStart} - {timeEnd})</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Contact Phone:</Text>
+              <Text style={styles.summaryValue}>+91 {phone}</Text>
+            </View>
+            <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.summaryLabel}>Settlement Bank:</Text>
+              <Text style={styles.summaryValue}>{bankName} ••••{accountNumber.slice(-4)} ({ifscCode})</Text>
+            </View>
+          </Card>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // Active Step Registration Form
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Top Header with Back Navigation */}
+      {/* Top Header */}
       <View style={styles.topHeader}>
         <Pressable
           style={styles.backBtn}
           onPress={() => {
-            if (navigation.canGoBack()) {
+            if (currentStep > 1) {
+              handlePrevStep();
+            } else if (navigation.canGoBack()) {
               navigation.goBack();
             } else {
               navigation.navigate('Main', { screen: 'Home' } as any);
             }
           }}
-          accessibilityLabel="Back to Dashboard"
+          accessibilityLabel={currentStep > 1 ? `Back to Step ${currentStep - 1}` : 'Back'}
           hitSlop={8}
         >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </Pressable>
+
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="medkit" size={17} color={colors.doctorBanner} />
+            <Ionicons name="medkit" size={17} color="#2563EB" />
             <Text style={styles.headerTitle}>Doctor Registration</Text>
           </View>
           <Text style={styles.headerSubtitle}>
-            MCI / SMC Registration • OPD Clinic & Practice Setup
+            Step {currentStep} of 5: {STEPS[currentStep - 1]?.title}
           </Text>
         </View>
-        <View style={styles.headerBadge}>
-          <Text style={styles.headerBadgeText}>Category 2</Text>
+
+        <View style={styles.stepBadgePill}>
+          <Text style={styles.stepBadgeText}>Step {currentStep}/5</Text>
         </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Doctor Hero Banner */}
-        <Card style={styles.bannerCard} padding="lg">
-          <View style={styles.bannerRow}>
-            <View style={styles.bannerIconBadge}>
-              <Ionicons name="medkit" size={26} color={colors.doctorBanner} />
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.bannerTitle}>Doctor Practice Portal</Text>
-                <View style={styles.doctorTag}>
-                  <Text style={styles.doctorTagText}>Clinic & Tele-health</Text>
-                </View>
-              </View>
-              <Text style={styles.bannerSubtitle}>
-                Register your specialist clinic, set OPD consultation fees, live video room, home visit radius & digital prescriptions.
-              </Text>
-            </View>
-          </View>
-        </Card>
+      {/* Step Progress Tracker with Ticks / Checkmarks */}
+      <View style={styles.progressTrackerContainer}>
+        <View style={styles.trackerRow}>
+          {STEPS.map((step, index) => {
+            const isCompleted = step.id < currentStep;
+            const isCurrent = step.id === currentStep;
+            const isPending = step.id > currentStep;
 
-        {/* 1. DOCTOR IDENTITY & AVATAR */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="person-circle-outline" size={18} color={colors.doctorBanner} />
-          <Text style={styles.sectionTitle}>1. Doctor Identity & Photo</Text>
-        </View>
-
-        <Card style={styles.formCard} padding="lg">
-          {/* Avatar Presets */}
-          <Text style={styles.inputLabel}>Doctor Profile Avatar</Text>
-          <View style={styles.avatarRow}>
-            {DOCTOR_AVATAR_PRESETS.map((preset, idx) => {
-              const selected = photo === preset.uri;
-              return (
-                <Pressable
-                  key={idx}
-                  style={[styles.avatarChoice, selected && styles.avatarChoiceSelected]}
-                  onPress={() => setPhoto(preset.uri)}
-                >
-                  <Image source={{ uri: preset.uri }} style={styles.avatarImg} />
-                  {selected && (
-                    <View style={styles.avatarCheckmark}>
-                      <Ionicons name="checkmark-circle" size={18} color={colors.doctorBanner} />
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={styles.inputLabel}>Doctor Full Name *</Text>
-          <TextInput
-            style={styles.textInput}
-            value={name}
-            onChangeText={setName}
-            placeholder="Dr. Full Name"
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <View style={styles.inputRow}>
-            <View style={{ flex: 1, marginRight: spacing.sm }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>Gender</Text>
-              <View style={styles.genderRow}>
-                {(['Male', 'Female', 'Other'] as const).map((g) => {
-                  const active = gender === g;
-                  return (
-                    <Pressable
-                      key={g}
-                      style={[styles.genderBtn, active && styles.genderBtnActive]}
-                      onPress={() => setGender(g)}
-                    >
-                      <Text style={[styles.genderBtnText, active && styles.genderBtnTextActive]}>
-                        {g}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>Primary Mobile *</Text>
-              <TextInput
-                style={styles.textInput}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                placeholder="10 digit number"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-          </View>
-
-          <Text style={styles.inputLabel}>Official Practice Email *</Text>
-          <TextInput
-            style={styles.textInput}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholder="doctor@onebuddy.health"
-            placeholderTextColor={colors.textMuted}
-          />
-        </Card>
-
-        {/* 2. MEDICAL COUNCIL CREDENTIALS */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="ribbon-outline" size={18} color={colors.doctorBanner} />
-          <Text style={styles.sectionTitle}>2. Medical Council Credentials & Degrees</Text>
-        </View>
-
-        <Card style={styles.formCard} padding="lg">
-          <Text style={styles.inputLabel}>
-            State Medical Council / MCI / NMC Registration Number *
-          </Text>
-          <TextInput
-            style={styles.textInput}
-            value={councilRegNumber}
-            onChangeText={setCouncilRegNumber}
-            placeholder="e.g. MCI-2019-84729"
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <Text style={styles.inputLabel}>Registration Medical Council *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-            {MEDICAL_COUNCILS.map((council) => {
-              const active = medicalCouncil === council;
-              return (
-                <Pressable
-                  key={council}
-                  style={[styles.typeChip, active && styles.typeChipActive]}
-                  onPress={() => setMedicalCouncil(council)}
-                >
-                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
-                    {council}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <Text style={styles.inputLabel}>Medical Specialization *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-            {SPECIALIZATIONS.map((spec) => {
-              const active = specialization === spec;
-              return (
-                <Pressable
-                  key={spec}
-                  style={[styles.typeChip, active && styles.typeChipActive]}
-                  onPress={() => setSpecialization(spec)}
-                >
-                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
-                    {spec}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <View style={styles.inputRow}>
-            <View style={{ flex: 2, marginRight: spacing.sm }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>Qualifications / Degrees *</Text>
-              <TextInput
-                style={styles.textInput}
-                value={qualification}
-                onChangeText={setQualification}
-                placeholder="MBBS, MD, MS, DM"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>Experience (Yrs)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={experience}
-                onChangeText={setExperience}
-                keyboardType="number-pad"
-                placeholder="10"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-          </View>
-
-          {/* Upload Council Certificate */}
-          <View style={styles.docUploadBox}>
-            <View style={styles.docUploadIconCircle}>
-              <Ionicons name="document-attach" size={20} color={colors.doctorBanner} />
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <Text style={styles.docUploadTitle}>MCI / Council Certificate</Text>
-              <Text style={styles.docUploadFilename}>{uploadedDoc}</Text>
-            </View>
-            <Pressable
-              style={styles.uploadBtn}
-              onPress={() => {
-                Alert.alert(
-                  'Upload Registration Proof',
-                  'Select registration certificate file from device.',
-                  [
-                    {
-                      text: 'Select PDF File',
-                      onPress: () =>
-                        setUploadedDoc(`Medical_Council_Reg_${Date.now().toString().slice(-4)}.pdf`),
-                    },
-                    { text: 'Cancel', style: 'cancel' },
-                  ],
-                );
-              }}
-            >
-              <Text style={styles.uploadBtnText}>Upload</Text>
-            </Pressable>
-          </View>
-        </Card>
-
-        {/* 3. CLINIC & CONSULTATION FEES */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="cash-outline" size={18} color={colors.doctorBanner} />
-          <Text style={styles.sectionTitle}>3. Clinic Practice & Consultation Fees</Text>
-        </View>
-
-        <Card style={styles.formCard} padding="lg">
-          <Text style={styles.inputLabel}>Clinic / Chamber Name</Text>
-          <TextInput
-            style={styles.textInput}
-            value={clinicName}
-            onChangeText={setClinicName}
-            placeholder="Clinic / Chamber Name"
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <Text style={styles.inputLabel}>Clinic Address</Text>
-          <TextInput
-            style={styles.textInput}
-            value={clinicAddress}
-            onChangeText={setClinicAddress}
-            placeholder="Clinic address & area"
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <View style={styles.inputRow}>
-            <View style={{ flex: 1, marginRight: spacing.xs }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>OPD Fee (₹)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={consultationFee}
-                onChangeText={setConsultationFee}
-                keyboardType="number-pad"
-                placeholder="750"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-            <View style={{ flex: 1, marginHorizontal: spacing.xs }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>Video Fee (₹)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={onlineFee}
-                onChangeText={setOnlineFee}
-                keyboardType="number-pad"
-                placeholder="600"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.xs }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>Home Visit (₹)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={homeVisitFee}
-                onChangeText={setHomeVisitFee}
-                keyboardType="number-pad"
-                placeholder="1200"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-          </View>
-
-          {/* Slot Duration */}
-          <Text style={styles.inputLabel}>Patient Consultation Slot Duration</Text>
-          <View style={styles.slotRow}>
-            {['15', '20', '30'].map((mins) => {
-              const active = slotDuration === mins;
-              return (
-                <Pressable
-                  key={mins}
-                  style={[styles.slotBtn, active && styles.slotBtnActive]}
-                  onPress={() => setSlotDuration(mins)}
-                >
-                  <Text style={[styles.slotBtnText, active && styles.slotBtnTextActive]}>
-                    {mins} Minutes
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </Card>
-
-        {/* 4. OPD SCHEDULE & WORKING DAYS */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="calendar-outline" size={18} color={colors.doctorBanner} />
-          <Text style={styles.sectionTitle}>4. Weekly OPD Schedule & Practice Hours</Text>
-        </View>
-
-        <Card style={styles.formCard} padding="lg">
-          <Text style={styles.inputLabel}>Weekly Practice Days (Tap to toggle)</Text>
-          <View style={styles.daysRow}>
-            {DAYS_OF_WEEK.map((day) => {
-              const active = availableDays.includes(day);
-              return (
-                <Pressable
-                  key={day}
-                  style={[styles.dayCircle, active && styles.dayCircleActive]}
-                  onPress={() => toggleDay(day)}
-                >
-                  <Text style={[styles.dayCircleText, active && styles.dayCircleTextActive]}>
-                    {day}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={styles.inputRow}>
-            <View style={{ flex: 1, marginRight: spacing.sm }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>OPD Starts</Text>
-              <TextInput
-                style={styles.textInput}
-                value={timeStart}
-                onChangeText={setTimeStart}
-                placeholder="09:00 AM"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>OPD Ends</Text>
-              <TextInput
-                style={styles.textInput}
-                value={timeEnd}
-                onChangeText={setTimeEnd}
-                placeholder="05:30 PM"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-          </View>
-
-          {/* Conditions Treated */}
-          <Text style={[styles.inputLabel, { marginTop: spacing.xs }]}>
-            Symptoms & Conditions Treated (Quick chips)
-          </Text>
-          <View style={styles.conditionsWrap}>
-            {COMMON_CONDITIONS.map((cond) => {
-              const added = healthIssues.includes(cond);
-              return (
-                <Pressable
-                  key={cond}
-                  style={[styles.conditionChip, added && styles.conditionChipAdded]}
-                  onPress={() => addCondition(cond)}
-                >
-                  <Ionicons
-                    name={added ? 'checkmark' : 'add'}
-                    size={13}
-                    color={added ? colors.doctorBanner : colors.textMuted}
+            return (
+              <React.Fragment key={step.id}>
+                {index > 0 && (
+                  <View
+                    style={[
+                      styles.trackerLine,
+                      isCompleted ? styles.trackerLineCompleted : styles.trackerLinePending,
+                    ]}
                   />
-                  <Text style={[styles.conditionChipText, added && styles.conditionChipTextAdded]}>
-                    {cond}
+                )}
+                <View style={styles.stepItemWrap}>
+                  <View
+                    style={[
+                      styles.stepCircle,
+                      isCompleted && styles.stepCircleCompleted,
+                      isCurrent && styles.stepCircleCurrent,
+                      isPending && styles.stepCirclePending,
+                    ]}
+                  >
+                    {isCompleted ? (
+                      <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.stepNumberText,
+                          isCurrent && styles.stepNumberTextCurrent,
+                          isPending && styles.stepNumberTextPending,
+                        ]}
+                      >
+                        {step.id}
+                      </Text>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.stepLabel,
+                      isCompleted && styles.stepLabelCompleted,
+                      isCurrent && styles.stepLabelCurrent,
+                      isPending && styles.stepLabelPending,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {step.title}
+                  </Text>
+                </View>
+              </React.Fragment>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Keyboard-aware scrollable registration form */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 160 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={true}
+        >
+          {/* STEP 1: DOCTOR OPTION & IDENTITY */}
+          {currentStep === 1 && (
+            <>
+              {/* Doctor Category Hero Banner */}
+              <Card style={styles.bannerCard} padding="lg">
+                <View style={styles.bannerRow}>
+                  <View style={styles.bannerIconBadge}>
+                    <Ionicons name="medkit" size={26} color="#2563EB" />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.md }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.bannerTitle}>Doctor Practice Onboarding</Text>
+                      <View style={styles.doctorTag}>
+                        <Text style={styles.doctorTagText}>Category 2</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.bannerSubtitle}>
+                      Register as a specialist consultant, family physician, or telemedicine expert with verified council credentials.
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+
+              {/* REQUIRED DOCTOR OPTION / DESIGNATION SELECTOR */}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="ribbon" size={18} color="#2563EB" />
+                <Text style={styles.sectionTitle}>1. Doctor Practice Option / Designation *</Text>
+              </View>
+
+              <Card style={styles.formCard} padding="lg">
+                <Text style={styles.inputLabel}>
+                  Select Doctor Option / Practice Category *
+                </Text>
+                <View style={styles.doctorOptionGrid}>
+                  {DOCTOR_PRACTICE_OPTIONS.map((opt) => {
+                    const active = doctorOption === opt.id;
+                    return (
+                      <Pressable
+                        key={opt.id}
+                        style={[styles.doctorOptionCard, active && styles.doctorOptionCardActive]}
+                        onPress={() => setDoctorOption(opt.id)}
+                        accessibilityLabel={`Select ${opt.label}`}
+                      >
+                        <Ionicons
+                          name={active ? 'checkmark-circle' : 'ellipse-outline'}
+                          size={18}
+                          color={active ? '#2563EB' : colors.textMuted}
+                        />
+                        <View style={{ flex: 1, marginLeft: 8 }}>
+                          <Text style={[styles.doctorOptionTitle, active && styles.doctorOptionTitleActive]}>
+                            {opt.label}
+                          </Text>
+                          <Text style={styles.doctorOptionSub}>{opt.sub}</Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>
+                  Practice Modality *
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+                  {PRACTICE_MODALITY_OPTIONS.map((mod) => {
+                    const active = practiceModality === mod;
+                    return (
+                      <Pressable
+                        key={mod}
+                        style={[styles.typeChip, active && styles.typeChipActive]}
+                        onPress={() => setPracticeModality(mod)}
+                      >
+                        <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                          {mod}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </Card>
+
+              {/* Personal & Specialty Profile */}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="person-circle" size={18} color="#2563EB" />
+                <Text style={styles.sectionTitle}>Doctor Profile & Qualifications</Text>
+              </View>
+
+              <Card style={styles.formCard} padding="lg">
+                <Text style={styles.inputLabel}>Doctor Full Name (with Prefix) *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="e.g. Dr. Rajesh Sharma"
+                  placeholderTextColor={colors.textMuted}
+                />
+
+                <Text style={styles.inputLabel}>Select Doctor Profile Avatar</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.avatarScroll}>
+                  {DOCTOR_AVATAR_PRESETS.map((item, idx) => {
+                    const isSelected = photo === item.uri;
+                    return (
+                      <Pressable
+                        key={idx}
+                        style={[styles.avatarChoice, isSelected && styles.avatarChoiceSelected]}
+                        onPress={() => setPhoto(item.uri)}
+                      >
+                        <Image source={{ uri: item.uri }} style={styles.avatarImg} />
+                        {isSelected && (
+                          <View style={styles.avatarCheckmarkBadge}>
+                            <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                          </View>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                <Text style={styles.inputLabel}>Primary Medical Specialization *</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+                  {SPECIALIZATIONS.map((spec) => {
+                    const active = specialization === spec;
+                    return (
+                      <Pressable
+                        key={spec}
+                        style={[styles.typeChip, active && styles.typeChipActive]}
+                        onPress={() => setSpecialization(spec)}
+                      >
+                        <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                          {spec}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                <View style={styles.inputRow}>
+                  <View style={{ flex: 1.5, marginRight: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Degrees / Qualifications *</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={qualification}
+                      onChangeText={setQualification}
+                      placeholder="MBBS, MD (Medicine)"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 0.8, marginLeft: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Exp (Years)</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={experience}
+                      onChangeText={setExperience}
+                      keyboardType="number-pad"
+                      placeholder="12"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                </View>
+              </Card>
+
+              {/* Step 1 Actions */}
+              <Pressable
+                style={styles.primaryStepBtn}
+                onPress={handleNextStep}
+                accessibilityLabel="Continue to Step 2 Credentials"
+              >
+                <Text style={styles.primaryStepBtnText}>Continue to Step 2: Credentials</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+              </Pressable>
+            </>
+          )}
+
+          {/* STEP 2: COUNCIL & REGULATORY CREDENTIALS */}
+          {currentStep === 2 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="shield-checkmark" size={18} color="#2563EB" />
+                <Text style={styles.sectionTitle}>2. Medical Council Registration & Credentials</Text>
+              </View>
+
+              <Card style={styles.formCard} padding="lg">
+                <Text style={styles.inputLabel}>
+                  Medical Council Registration Number *
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={councilRegNumber}
+                  onChangeText={setCouncilRegNumber}
+                  placeholder="e.g. MCI-2019-84729"
+                  placeholderTextColor={colors.textMuted}
+                />
+
+                <Text style={styles.inputLabel}>Registering Medical Council *</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+                  {MEDICAL_COUNCILS.map((c) => {
+                    const active = medicalCouncil === c;
+                    return (
+                      <Pressable
+                        key={c}
+                        style={[styles.typeChip, active && styles.typeChipActive]}
+                        onPress={() => setMedicalCouncil(c)}
+                      >
+                        <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                          {c}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                <View style={styles.inputRow}>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Year of Registration</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={councilRegYear}
+                      onChangeText={setCouncilRegYear}
+                      keyboardType="number-pad"
+                      placeholder="2014"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1.5, marginLeft: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Hospital Affiliation</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={affiliatedHospital}
+                      onChangeText={setAffiliatedHospital}
+                      placeholder="Metro Apex Hospital"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.infoBanner}>
+                  <Ionicons name="shield" size={18} color="#2563EB" />
+                  <Text style={styles.infoBannerText}>
+                    Doctor registration numbers are verified with the NMC National Medical Register to ensure authorized telemedicine & clinical practice.
+                  </Text>
+                </View>
+              </Card>
+
+              {/* Step 2 Actions */}
+              <View style={styles.stepBtnRow}>
+                <Pressable
+                  style={styles.secondaryStepBtn}
+                  onPress={handlePrevStep}
+                  accessibilityLabel="Back to Step 1"
+                >
+                  <Ionicons name="arrow-back" size={16} color={colors.text} />
+                  <Text style={styles.secondaryStepBtnText}>Back</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  onPress={handleNextStep}
+                  accessibilityLabel="Continue to Step 3 Schedule & Fees"
+                >
+                  <Text style={styles.primaryStepBtnText}>Step 3: Schedule & Fees</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            </>
+          )}
+
+          {/* STEP 3: PRACTICE SCHEDULE & FEES */}
+          {currentStep === 3 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="cash" size={18} color="#2563EB" />
+                <Text style={styles.sectionTitle}>3. Consultation Fees & Practice Schedule</Text>
+              </View>
+
+              <Card style={styles.formCard} padding="lg">
+                <Text style={styles.inputLabel}>Practice Chambers / Clinic Name *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={clinicName}
+                  onChangeText={setClinicName}
+                  placeholder="Dr. Rajesh Sharma Cardiology Clinic"
+                  placeholderTextColor={colors.textMuted}
+                />
+
+                <Text style={styles.inputLabel}>Clinic Address *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={clinicAddress}
+                  onChangeText={setClinicAddress}
+                  placeholder="Suite 204, Meditech Plaza, Indiranagar, Bengaluru"
+                  placeholderTextColor={colors.textMuted}
+                />
+
+                <View style={styles.inputRow}>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Primary Mobile *</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={phone}
+                      onChangeText={setPhone}
+                      keyboardType="phone-pad"
+                      placeholder="10-digit mobile"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Doctor Email *</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      placeholder="dr.rajesh@health.com"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                </View>
+
+                {/* Consultation Fees */}
+                <View style={styles.inputRow}>
+                  <View style={{ flex: 1, marginRight: spacing.xs }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>In-Clinic Fee (₹)</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={consultationFee}
+                      onChangeText={setConsultationFee}
+                      keyboardType="number-pad"
+                      placeholder="750"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginHorizontal: spacing.xs }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Video Fee (₹)</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={onlineFee}
+                      onChangeText={setOnlineFee}
+                      keyboardType="number-pad"
+                      placeholder="600"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.xs }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Home Visit (₹)</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={homeVisitFee}
+                      onChangeText={setHomeVisitFee}
+                      keyboardType="number-pad"
+                      placeholder="1200"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                </View>
+
+                {/* Consulting Days */}
+                <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>
+                  Consultation Days (Tap to toggle)
+                </Text>
+                <View style={styles.daysRow}>
+                  {DAYS_OF_WEEK.map((day) => {
+                    const active = availableDays.includes(day);
+                    return (
+                      <Pressable
+                        key={day}
+                        style={[styles.dayChip, active && styles.dayChipActive]}
+                        onPress={() => toggleDay(day)}
+                      >
+                        <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                          {day}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Start Time</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={timeStart}
+                      onChangeText={setTimeStart}
+                      placeholder="09:00 AM"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>End Time</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={timeEnd}
+                      onChangeText={setTimeEnd}
+                      placeholder="05:00 PM"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                </View>
+              </Card>
+
+              {/* Step 3 Actions */}
+              <View style={styles.stepBtnRow}>
+                <Pressable
+                  style={styles.secondaryStepBtn}
+                  onPress={handlePrevStep}
+                  accessibilityLabel="Back to Step 2"
+                >
+                  <Ionicons name="arrow-back" size={16} color={colors.text} />
+                  <Text style={styles.secondaryStepBtnText}>Back</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  onPress={handleNextStep}
+                  accessibilityLabel="Continue to Step 4 Document Upload"
+                >
+                  <Text style={styles.primaryStepBtnText}>Step 4: Upload Documents</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            </>
+          )}
+
+          {/* STEP 4: REGULATORY DOCUMENT UPLOADS */}
+          {currentStep === 4 && (
+            <>
+              {/* Back Button Returning to Previous Registration Step without losing info */}
+              <View style={styles.docBackHeader}>
+                <Pressable
+                  style={styles.docBackBtn}
+                  onPress={handlePrevStep}
+                  accessibilityLabel="Back to Step 3: Practice & Fees"
+                >
+                  <Ionicons name="arrow-back" size={18} color="#2563EB" />
+                  <Text style={styles.docBackBtnText}>Back to Step 3: Practice & Fees</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.sectionHeader}>
+                <Ionicons name="cloud-upload" size={18} color="#2563EB" />
+                <Text style={styles.sectionTitle}>4. Medical Council Document Verification</Text>
+              </View>
+
+              <Card style={styles.formCard} padding="lg">
+                <Text style={styles.uploadSectionTitle}>
+                  Medical Council Registration Certificate (MCI / State SMC) *
+                </Text>
+                <View style={styles.docUploadBox}>
+                  <View style={styles.docUploadIconCircle}>
+                    <Ionicons name="document-attach" size={22} color="#2563EB" />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                    <Text style={styles.docUploadTitle}>Council Certificate PDF</Text>
+                    <Text style={styles.docUploadFilename}>{uploadedDoc}</Text>
+                    <View style={styles.verifiedDocPill}>
+                      <Ionicons name="checkmark-circle" size={11} color="#15803D" />
+                      <Text style={styles.verifiedDocPillText}>Ready for Verification</Text>
+                    </View>
+                  </View>
+                  <Pressable
+                    style={styles.uploadBtn}
+                    onPress={() => {
+                      Alert.alert('Upload Certificate', 'Select replacement Medical Council document.', [
+                        {
+                          text: 'Replace PDF',
+                          onPress: () =>
+                            setUploadedDoc(`Medical_Council_Reg_${Date.now().toString().slice(-4)}.pdf`),
+                        },
+                        { text: 'Cancel', style: 'cancel' },
+                      ]);
+                    }}
+                  >
+                    <Text style={styles.uploadBtnText}>Replace</Text>
+                  </Pressable>
+                </View>
+
+                <Text style={[styles.uploadSectionTitle, { marginTop: spacing.md }]}>
+                  Postgraduate Degree / Specialization Certificate
+                </Text>
+                <View style={styles.docUploadBox}>
+                  <View style={[styles.docUploadIconCircle, { backgroundColor: '#EDE9FE' }]}>
+                    <Ionicons name="school" size={22} color="#7C3AED" />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                    <Text style={styles.docUploadTitle}>Degree Certificate PDF</Text>
+                    <Text style={styles.docUploadFilename}>{uploadedDegreeDoc}</Text>
+                    <View style={[styles.verifiedDocPill, { backgroundColor: '#EDE9FE' }]}>
+                      <Ionicons name="checkmark-circle" size={11} color="#7C3AED" />
+                      <Text style={[styles.verifiedDocPillText, { color: '#6D28D9' }]}>
+                        File Attached
+                      </Text>
+                    </View>
+                  </View>
+                  <Pressable
+                    style={styles.uploadBtn}
+                    onPress={() => {
+                      Alert.alert('Upload Degree', 'Select replacement PG degree certificate.', [
+                        {
+                          text: 'Replace PDF',
+                          onPress: () =>
+                            setUploadedDegreeDoc(`PG_Degree_${Date.now().toString().slice(-4)}.pdf`),
+                        },
+                        { text: 'Cancel', style: 'cancel' },
+                      ]);
+                    }}
+                  >
+                    <Text style={styles.uploadBtnText}>Replace</Text>
+                  </Pressable>
+                </View>
+              </Card>
+
+              {/* Step 4 Navigation with Dedicated Back Button */}
+              <View style={styles.stepBtnRow}>
+                <Pressable
+                  style={styles.secondaryStepBtn}
+                  onPress={handlePrevStep}
+                  accessibilityLabel="Back to Step 3"
+                >
+                  <Ionicons name="arrow-back" size={16} color={colors.text} />
+                  <Text style={styles.secondaryStepBtnText}>Back to Step 3</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  onPress={handleNextStep}
+                  accessibilityLabel="Continue to Step 5 Bank & Ethics"
+                >
+                  <Text style={styles.primaryStepBtnText}>Step 5: Bank & Ethics</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            </>
+          )}
+
+          {/* STEP 5: BANK SETTLEMENT & MEDICAL ETHICS */}
+          {currentStep === 5 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="card" size={18} color="#2563EB" />
+                <Text style={styles.sectionTitle}>5. Revenue Disbursal & Code of Ethics</Text>
+              </View>
+
+              <Card style={styles.formCard} padding="lg">
+                <Text style={styles.inputLabel}>Payout Bank Name *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={bankName}
+                  onChangeText={setBankName}
+                  placeholder="e.g. ICICI Bank, HDFC Bank, SBI"
+                  placeholderTextColor={colors.textMuted}
+                />
+
+                <View style={styles.inputRow}>
+                  <View style={{ flex: 1.4, marginRight: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>Account Number *</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={accountNumber}
+                      onChangeText={setAccountNumber}
+                      keyboardType="number-pad"
+                      placeholder="Account number"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                    <Text style={styles.inputLabel} numberOfLines={1}>IFSC Code *</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={ifscCode}
+                      onChangeText={setIfscCode}
+                      autoCapitalize="characters"
+                      placeholder="ICIC0000021"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.inputLabel}>Direct Doctor UPI ID</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={upiId}
+                  onChangeText={setUpiId}
+                  autoCapitalize="none"
+                  placeholder="dr.rajesh@upi"
+                  placeholderTextColor={colors.textMuted}
+                />
+              </Card>
+
+              {/* Ethics Declaration */}
+              <Card style={styles.declarationCard} padding="md">
+                <Pressable
+                  style={styles.checkboxRow}
+                  onPress={() => setIsDeclared(!isDeclared)}
+                  accessibilityLabel="Agree to Medical Ethics"
+                >
+                  <View
+                    style={[
+                      styles.checkboxBox,
+                      isDeclared && {
+                        backgroundColor: '#2563EB',
+                        borderColor: '#2563EB',
+                      },
+                    ]}
+                  >
+                    {isDeclared && <Ionicons name="checkmark" size={15} color="#FFFFFF" />}
+                  </View>
+                  <Text style={styles.declarationText}>
+                    I confirm adherence to the NMC Telemedicine Practice Guidelines, Indian Medical Council (Professional Conduct, Etiquette & Ethics) Regulations, and affirm that all submitted qualification credentials are accurate.
                   </Text>
                 </Pressable>
-              );
-            })}
-          </View>
+              </Card>
 
-          <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>Doctor Bio & Clinical Summary</Text>
-          <TextInput
-            style={[styles.textInput, { height: 75, textAlignVertical: 'top' }]}
-            value={bio}
-            onChangeText={setBio}
-            multiline
-            placeholder="Summary of experience, research, clinical achievements..."
-            placeholderTextColor={colors.textMuted}
-          />
-        </Card>
+              {/* Final Step Actions */}
+              <View style={styles.stepBtnRow}>
+                <Pressable
+                  style={styles.secondaryStepBtn}
+                  onPress={handlePrevStep}
+                  accessibilityLabel="Back to Step 4 Documents"
+                >
+                  <Ionicons name="arrow-back" size={16} color={colors.text} />
+                  <Text style={styles.secondaryStepBtnText}>Back to Step 4</Text>
+                </Pressable>
 
-        {/* 5. SETTLEMENT BANK ACCOUNT */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="card-outline" size={18} color={colors.doctorBanner} />
-          <Text style={styles.sectionTitle}>5. Doctor Consultation Payouts Account</Text>
-        </View>
-
-        <Card style={styles.formCard} padding="lg">
-          <Text style={styles.inputLabel}>Bank Name</Text>
-          <TextInput
-            style={styles.textInput}
-            value={bankName}
-            onChangeText={setBankName}
-            placeholder="HDFC Bank / SBI / ICICI"
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <View style={styles.inputRow}>
-            <View style={{ flex: 1.4, marginRight: spacing.sm }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>Account Number</Text>
-              <TextInput
-                style={styles.textInput}
-                value={accountNumber}
-                onChangeText={setAccountNumber}
-                keyboardType="number-pad"
-                placeholder="Account number"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <Text style={styles.inputLabel} numberOfLines={1}>IFSC Code</Text>
-              <TextInput
-                style={styles.textInput}
-                value={ifscCode}
-                onChangeText={setIfscCode}
-                autoCapitalize="characters"
-                placeholder="HDFC0001234"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-          </View>
-
-          <Text style={styles.inputLabel}>Direct UPI ID (Instant Patient Fee Settlement)</Text>
-          <TextInput
-            style={styles.textInput}
-            value={upiId}
-            onChangeText={setUpiId}
-            autoCapitalize="none"
-            placeholder="doctor@upi"
-            placeholderTextColor={colors.textMuted}
-          />
-        </Card>
-
-        {/* 6. TELEMEDICINE & MEDICAL ETHICS DECLARATION */}
-        <Card style={styles.declarationCard} padding="md">
-          <Pressable
-            style={styles.checkboxRow}
-            onPress={() => setIsDeclared(!isDeclared)}
-            accessibilityLabel="Agree to Telemedicine Guidelines"
-          >
-            <View
-              style={[
-                styles.checkboxBox,
-                isDeclared && {
-                  backgroundColor: colors.doctorBanner,
-                  borderColor: colors.doctorBanner,
-                },
-              ]}
-            >
-              {isDeclared && <Ionicons name="checkmark" size={15} color="#FFFFFF" />}
-            </View>
-            <Text style={styles.declarationText}>
-              I declare that I am a Registered Medical Practitioner (RMP) under the National
-              Medical Commission Act / State Medical Council. I agree to abide by the Indian
-              Telemedicine Practice Guidelines 2020 and OneBuddy digital prescription standards.
-            </Text>
-          </Pressable>
-        </Card>
-
-        {/* Primary Action Button */}
-        <Pressable
-          style={styles.submitBtn}
-          onPress={handleRegisterDoctor}
-          accessibilityLabel="Save Doctor Registration"
-        >
-          <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-          <Text style={styles.submitBtnText}>
-            {isEditing ? 'Update Doctor Registration' : 'Register Doctor & Activate Practice'}
-          </Text>
-        </Pressable>
-
-        {/* Back Button */}
-        <Pressable
-          style={styles.cancelBtn}
-          onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', { screen: 'Home' } as any);
-            }
-          }}
-          accessibilityLabel="Back to Dashboard"
-        >
-          <Ionicons name="arrow-back" size={16} color={colors.textMuted} />
-          <Text style={styles.cancelBtnText}>Back to Dashboard</Text>
-        </Pressable>
-      </ScrollView>
+                <Pressable
+                  style={[styles.primaryStepBtn, { flex: 2, backgroundColor: '#2563EB' }]}
+                  onPress={handleRegisterDoctor}
+                  accessibilityLabel="Complete Doctor Registration"
+                >
+                  <Ionicons name="medkit" size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryStepBtnText}>Complete & Open Dashboard</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -819,90 +1272,180 @@ export default function DoctorRegistrationScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0F172A',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
+    paddingVertical: 12,
+    minHeight: 56,
+    backgroundColor: '#1E293B',
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    gap: spacing.sm,
+    borderBottomColor: '#334155',
   },
   backBtn: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: radius.md,
-    backgroundColor: colors.background,
+    backgroundColor: '#0F172A',
     borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
+    borderColor: '#334155',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: colors.text,
+    color: '#F8FAFC',
   },
   headerSubtitle: {
     fontSize: 11,
-    color: colors.textMuted,
-    marginTop: 1,
+    color: '#94A3B8',
+    marginTop: 2,
   },
-  headerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  stepBadgePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: radius.full,
-    backgroundColor: colors.medicalBlueLight,
+    backgroundColor: '#2563EB',
   },
-  headerBadgeText: {
+  stepBadgeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: colors.doctorBanner,
+    color: '#FFFFFF',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  verifiedBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  progressTrackerContainer: {
+    backgroundColor: '#1E293B',
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  trackerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  trackerLine: {
+    flex: 1,
+    height: 2,
+    marginHorizontal: 4,
+  },
+  trackerLineCompleted: {
+    backgroundColor: '#16A34A',
+  },
+  trackerLinePending: {
+    backgroundColor: '#334155',
+  },
+  stepItemWrap: {
+    alignItems: 'center',
+    width: 58,
+  },
+  stepCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  stepCircleCompleted: {
+    backgroundColor: '#16A34A',
+    borderColor: '#16A34A',
+  },
+  stepCircleCurrent: {
+    backgroundColor: '#2563EB',
+    borderColor: '#60A5FA',
+  },
+  stepCirclePending: {
+    backgroundColor: '#0F172A',
+    borderColor: '#334155',
+  },
+  stepNumberText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  stepNumberTextCurrent: {
+    color: '#FFFFFF',
+  },
+  stepNumberTextPending: {
+    color: '#64748B',
+  },
+  stepLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  stepLabelCompleted: {
+    color: '#16A34A',
+    fontWeight: '700',
+  },
+  stepLabelCurrent: {
+    color: '#F8FAFC',
+    fontWeight: '800',
+  },
+  stepLabelPending: {
+    color: '#64748B',
   },
   scrollContent: {
-    padding: spacing.lg,
+    backgroundColor: '#0B1120',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     gap: spacing.md,
   },
   bannerCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
     borderWidth: 1,
-    borderColor: `${colors.doctorBanner}40`,
   },
   bannerRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   bannerIconBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.medicalBlueLight,
-    justifyContent: 'center',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   bannerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: colors.text,
+    color: '#F8FAFC',
   },
   doctorTag: {
+    backgroundColor: '#2563EB',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radius.full,
-    backgroundColor: colors.medicalBlueLight,
   },
   doctorTagText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    color: colors.doctorBanner,
+    color: '#FFFFFF',
   },
   bannerSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: '#94A3B8',
     marginTop: 4,
     lineHeight: 17,
   },
@@ -915,305 +1458,490 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: colors.text,
+    color: '#F8FAFC',
   },
   formCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderRadius: radius.lg,
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.textSecondary,
+    color: '#E2E8F0',
     marginBottom: 6,
-    marginTop: 4,
-    minHeight: 18,
+    marginTop: spacing.sm,
   },
   textInput: {
-    backgroundColor: colors.background,
+    backgroundColor: '#0F172A',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#334155',
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    height: 44,
-    fontSize: 14,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  avatarRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: spacing.md,
-  },
-  avatarChoice: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.full,
-    borderWidth: 2,
-    borderColor: colors.border,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  avatarChoiceSelected: {
-    borderColor: colors.doctorBanner,
-    borderWidth: 3,
-  },
-  avatarImg: {
-    width: '100%',
-    height: '100%',
-    borderRadius: radius.full,
-  },
-  avatarCheckmark: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#F8FAFC',
   },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  genderRow: {
-    flexDirection: 'row',
-    gap: 6,
-    height: 44,
-    marginBottom: spacing.md,
-  },
-  genderBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  genderBtnActive: {
-    backgroundColor: colors.medicalBlueLight,
-    borderColor: colors.doctorBanner,
+  doctorOptionGrid: {
+    gap: 8,
+    marginTop: 4,
   },
-  genderBtnText: {
-    fontSize: 11,
+  doctorOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
+    padding: 12,
+    borderRadius: radius.md,
+  },
+  doctorOptionCardActive: {
+    backgroundColor: '#172554',
+    borderColor: '#2563EB',
+    borderWidth: 1.5,
+  },
+  doctorOptionTitle: {
+    fontSize: 13,
     fontWeight: '700',
-    color: colors.textSecondary,
+    color: '#F8FAFC',
   },
-  genderBtnTextActive: {
-    color: colors.doctorBanner,
-    fontWeight: '800',
+  doctorOptionTitleActive: {
+    color: '#93C5FD',
+  },
+  doctorOptionSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
   },
   chipScroll: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
+    marginVertical: 4,
   },
   typeChip: {
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: radius.full,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
     marginRight: 8,
   },
   typeChipActive: {
-    backgroundColor: colors.medicalBlueLight,
-    borderColor: colors.doctorBanner,
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
   },
   typeChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: '#94A3B8',
   },
   typeChipTextActive: {
-    color: colors.doctorBanner,
-    fontWeight: '800',
-  },
-  slotRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: spacing.sm,
-  },
-  slotBtn: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  slotBtnActive: {
-    backgroundColor: colors.medicalBlueLight,
-    borderColor: colors.doctorBanner,
-  },
-  slotBtnText: {
-    fontSize: 12,
+    color: '#FFFFFF',
     fontWeight: '700',
-    color: colors.textSecondary,
   },
-  slotBtnTextActive: {
-    color: colors.doctorBanner,
-    fontWeight: '800',
+  avatarScroll: {
+    marginVertical: 6,
+  },
+  avatarChoice: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: '#334155',
+    position: 'relative',
+  },
+  avatarChoiceSelected: {
+    borderColor: '#2563EB',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+  },
+  avatarCheckmarkBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#2563EB',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   daysRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  dayCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.full,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dayCircleActive: {
-    backgroundColor: colors.doctorBanner,
-    borderColor: colors.doctorBanner,
-  },
-  dayCircleText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  dayCircleTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  conditionsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 6,
     marginTop: 4,
-    marginBottom: spacing.xs,
   },
-  conditionChip: {
-    flexDirection: 'row',
+  dayChip: {
+    flex: 1,
+    paddingVertical: 8,
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-    backgroundColor: colors.background,
+    backgroundColor: '#0F172A',
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: '#334155',
+    borderRadius: radius.sm,
   },
-  conditionChipAdded: {
-    backgroundColor: colors.medicalBlueLight,
-    borderColor: colors.doctorBanner,
+  dayChipActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
   },
-  conditionChipText: {
+  dayChipText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: '#94A3B8',
   },
-  conditionChipTextAdded: {
-    color: colors.doctorBanner,
+  dayChipTextActive: {
+    color: '#FFFFFF',
     fontWeight: '700',
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#172554',
+    borderColor: '#2563EB',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+  },
+  infoBannerText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#BFDBFE',
+    lineHeight: 16,
+  },
+  docBackHeader: {
+    marginBottom: spacing.xs,
+  },
+  docBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#1E293B',
+    borderColor: '#2563EB',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    alignSelf: 'flex-start',
+  },
+  docBackBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#93C5FD',
+  },
+  uploadSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    marginBottom: 6,
   },
   docUploadBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: '#0F172A',
+    borderColor: '#334155',
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.md,
-    padding: spacing.md,
-    marginTop: spacing.xs,
+    padding: 12,
   },
   docUploadIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.medicalBlueLight,
-    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#172554',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   docUploadTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.text,
+    color: '#F8FAFC',
   },
   docUploadFilename: {
     fontSize: 11,
-    color: colors.textMuted,
-    marginTop: 1,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  verifiedDocPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#052E16',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  verifiedDocPillText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#86EFAC',
   },
   uploadBtn: {
-    paddingHorizontal: spacing.md,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: radius.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   uploadBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: colors.doctorBanner,
+    color: '#FFFFFF',
   },
   declarationCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
     borderWidth: 1,
-    borderColor: colors.borderLight,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.sm,
   },
   checkboxBox: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: colors.textMuted,
-    justifyContent: 'center',
+    borderColor: '#64748B',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
     marginTop: 2,
   },
   declarationText: {
     flex: 1,
     fontSize: 12,
-    color: colors.textSecondary,
-    lineHeight: 18,
+    color: '#CBD5E1',
+    lineHeight: 17,
   },
-  submitBtn: {
+  stepBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: spacing.sm,
+  },
+  primaryStepBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    backgroundColor: '#2563EB',
     paddingVertical: 14,
     borderRadius: radius.md,
-    backgroundColor: colors.doctorBanner,
-    shadowColor: colors.doctorBanner,
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
     marginTop: spacing.xs,
   },
-  submitBtnText: {
-    fontSize: 15,
+  primaryStepBtnText: {
+    fontSize: 14,
     fontWeight: '800',
     color: '#FFFFFF',
   },
-  cancelBtn: {
+  secondaryStepBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: radius.md,
   },
-  cancelBtnText: {
+  secondaryStepBtnText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: colors.textMuted,
+    fontWeight: '700',
+    color: '#E2E8F0',
+  },
+  dashboardHeroCard: {
+    backgroundColor: '#1E293B',
+    borderColor: '#2563EB',
+    borderWidth: 1.5,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroDoctorAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#2563EB',
+  },
+  heroDoctorName: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#F8FAFC',
+  },
+  doctorOptionTag: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  doctorOptionTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  heroSubText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  heroCouncilText: {
+    fontSize: 10,
+    color: '#60A5FA',
+    marginTop: 1,
+  },
+  onlineToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
+    padding: 12,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+    gap: 12,
+  },
+  onlineToggleTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  onlineToggleSub: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  onlineToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+  },
+  onlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  onlineToggleBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  actionCard: {
+    width: '48%',
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: radius.lg,
+    padding: 12,
+  },
+  actionIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  actionCardTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#F8FAFC',
+  },
+  actionCardSub: {
+    fontSize: 10,
+    color: '#94A3B8',
+    marginTop: 2,
+    lineHeight: 14,
+  },
+  actionLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  actionLinkText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  summaryCard: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+    borderWidth: 1,
+  },
+  summaryCardHeading: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    marginBottom: spacing.xs,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+    gap: 8,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: '#94A3B8',
+    minWidth: 100,
+  },
+  summaryValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    flex: 1,
+    textAlign: 'right',
   },
 });

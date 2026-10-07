@@ -101,6 +101,66 @@ export default function SettingsScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </Pressable>
 
+        {/* Medical Council & Legal Compliance Card */}
+        <Card style={styles.cardSection} padding="md">
+          <View style={styles.sectionHeaderRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
+              <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
+              <Text style={styles.sectionHeading} numberOfLines={1}>Medical Council & Legal Compliance</Text>
+            </View>
+            <View
+              style={[
+                styles.approvalStatusPill,
+                provider.approvalStatus === 'approved'
+                  ? { backgroundColor: colors.successLight }
+                  : provider.approvalStatus === 'pending'
+                  ? { backgroundColor: colors.warningLight }
+                  : { backgroundColor: colors.dangerLight },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.approvalStatusText,
+                  provider.approvalStatus === 'approved'
+                    ? { color: colors.success }
+                    : provider.approvalStatus === 'pending'
+                    ? { color: colors.warning }
+                    : { color: colors.danger },
+                ]}
+              >
+                {provider.approvalStatus.toUpperCase()}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.legalDataRow}>
+            <Text style={styles.legalFieldLabel}>Regulatory Council:</Text>
+            <Text style={styles.legalFieldValue} numberOfLines={2}>{provider.licenseType}</Text>
+          </View>
+
+          <View style={styles.legalDataRow}>
+            <Text style={styles.legalFieldLabel}>License / Reg Number:</Text>
+            <Text style={styles.legalFieldValue}>{provider.licenseNumber}</Text>
+          </View>
+
+          <View style={[styles.legalDataRow, { borderBottomWidth: 0 }]}>
+            <Text style={styles.legalFieldLabel}>Compliance Document:</Text>
+            <Pressable
+              style={styles.legalDocPressable}
+              onPress={() => {
+                Alert.alert(
+                  'Verified Regulatory Document',
+                  `Document File: ${provider.licenseDocName}\nAuthority: ${provider.licenseType}\nStatus: Verified by One Buddy Legal Compliance Desk.`,
+                );
+              }}
+              accessibilityLabel="View compliance document"
+            >
+              <Ionicons name="document-attach" size={13} color={colors.primary} />
+              <Text style={styles.docLinkText} numberOfLines={1}>{provider.licenseDocName}</Text>
+            </Pressable>
+          </View>
+        </Card>
+
         {/* Practice Consultation & Radius Settings (For Doctors & Clinics) */}
         {providerType === 'doctor' && (
           <Card style={styles.cardSection} padding="md">
@@ -362,6 +422,50 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+  },
+  legalDataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    gap: 8,
+  },
+  legalFieldLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    flex: 1,
+    marginRight: 8,
+  },
+  legalFieldValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'right',
+    maxWidth: '65%',
+  },
+  legalDocPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: '65%',
+    justifyContent: 'flex-end',
+  },
+  approvalStatusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  approvalStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  docLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+    textDecorationLine: 'underline',
   },
   dataLabel: {
     fontSize: 12,
