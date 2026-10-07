@@ -12,7 +12,6 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, radius, spacing } from '../../theme/colors';
 import { RootStackParamList, TabParamList } from '../../navigation/types';
-import { useApp } from '../../context/AppContext';
 import { ProviderType } from '../../types';
 import HospitalRegistrationScreen from '../hospital/HospitalRegistrationScreen';
 import DoctorRegistrationScreen from '../doctor/DoctorRegistrationScreen';
@@ -65,7 +64,6 @@ const CATEGORIES: {
 export default function RegistrationPortalScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList> & BottomTabNavigationProp<TabParamList>>();
   const route = useRoute<RegistrationPortalRouteProp>();
-  const { provider, toggleOnlineAvailability } = useApp();
 
   const [activeCategory, setActiveCategory] = useState<ProviderType>(
     route.params?.category || 'hospital',
@@ -95,49 +93,6 @@ export default function RegistrationPortalScreen() {
               Initial Setup • Direct Category Access (No Signout Needed)
             </Text>
           </View>
-        </View>
-
-        <View style={styles.headerRight}>
-          {/* Silent Online/Offline Status Indicator */}
-          <Pressable
-            style={[
-              styles.onlineStatusPill,
-              {
-                backgroundColor: provider.isOnline ? '#DCFCE7' : '#F1F5F9',
-                borderColor: provider.isOnline ? '#86EFAC' : '#CBD5E1',
-              },
-            ]}
-            onPress={toggleOnlineAvailability}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: provider.isOnline }}
-            accessibilityLabel={`Provider is ${provider.isOnline ? 'Online' : 'Offline'}. Tap to toggle.`}
-            hitSlop={6}
-          >
-            <View
-              style={[
-                styles.onlineDot,
-                { backgroundColor: provider.isOnline ? '#16A34A' : '#64748B' },
-              ]}
-            />
-            <Text
-              style={[
-                styles.onlineText,
-                { color: provider.isOnline ? '#15803D' : '#475569' },
-              ]}
-            >
-              {provider.isOnline ? 'ONLINE' : 'OFFLINE'}
-            </Text>
-          </Pressable>
-
-          {/* Quick link to Live Operations */}
-          <Pressable
-            style={styles.liveOpsBtn}
-            onPress={() => navigation.navigate('Home')}
-            accessibilityLabel="Switch to Live Operations Dashboard"
-          >
-            <Ionicons name="pulse" size={13} color="#FFFFFF" />
-            <Text style={styles.liveOpsBtnText}>Live Ops</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -276,46 +231,6 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 9,
     fontWeight: '800',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  onlineStatusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    gap: 4,
-  },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  onlineText: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  liveOpsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  liveOpsBtnText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
   categorySelectorBar: {
     flexDirection: 'row',

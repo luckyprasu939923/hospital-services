@@ -317,29 +317,49 @@ export default function BookingsOrdersScreen() {
   const renderConsultationItem = ({ item }: { item: OnlineConsultation }) => {
     return (
       <Card style={styles.bookingCard}>
+        {/* 1. Header: Patient Name & Status Badge */}
         <View style={styles.cardHeader}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.titleRow}>
-              <Text style={styles.patientName}>{item.patientName}</Text>
+          <View style={styles.headerLeftBlock}>
+            <Text style={styles.patientName} numberOfLines={1}>
+              {item.patientName}
+            </Text>
+            <View style={styles.subHeaderRow}>
               <View style={styles.onlineBadge}>
                 <Ionicons name="videocam" size={12} color={colors.medicalBlue} />
-                <Text style={styles.onlineBadgeText}>Video Consultation</Text>
+                <Text style={styles.onlineBadgeText}>Video Consult</Text>
               </View>
+              <Text style={styles.patientMetaDot}>•</Text>
+              <Text style={styles.patientMetaText}>
+                {item.patientGender}, {item.patientAge} yrs
+              </Text>
+              <Text style={styles.patientMetaDot}>•</Text>
+              <Text style={styles.patientMetaPhone}>📞 {item.patientPhone}</Text>
             </View>
-            <Text style={styles.phoneText}>
-              {item.patientGender}, {item.patientAge} yrs • 📞 {item.patientPhone}
-            </Text>
           </View>
+
           <View
             style={[
               styles.statusBadge,
               item.status === 'completed'
-                ? { backgroundColor: colors.successLight }
+                ? { backgroundColor: colors.successLight, borderColor: '#86EFAC' }
                 : item.status === 'in_call'
-                ? { backgroundColor: colors.infoLight }
-                : { backgroundColor: colors.medicalBlueLight },
+                ? { backgroundColor: colors.infoLight, borderColor: '#93C5FD' }
+                : { backgroundColor: colors.medicalBlueLight, borderColor: '#BFDBFE' },
             ]}
           >
+            <View
+              style={[
+                styles.statusDot,
+                {
+                  backgroundColor:
+                    item.status === 'completed'
+                      ? colors.success
+                      : item.status === 'in_call'
+                      ? colors.info
+                      : colors.medicalBlue,
+                },
+              ]}
+            />
             <Text
               style={[
                 styles.statusBadgeText,
@@ -350,39 +370,45 @@ export default function BookingsOrdersScreen() {
                   : { color: colors.medicalBlue },
               ]}
             >
-              {item.status.toUpperCase()}
+              {item.status.replace('_', ' ').toUpperCase()}
             </Text>
           </View>
         </View>
 
+        {/* 2. Problem / Symptoms Box */}
         <View style={styles.problemBox}>
-          <Text style={styles.problemLabel}>Patient Problem / Symptoms</Text>
+          <View style={styles.problemHeader}>
+            <Ionicons name="pulse" size={13} color={colors.primary} />
+            <Text style={styles.problemLabel}>Symptoms & Reason For Consult</Text>
+          </View>
           <Text style={styles.problemContent}>{item.problemDescription}</Text>
         </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.metaText}>{item.date}</Text>
+        {/* 3. Schedule & Net Payout Row */}
+        <View style={styles.schedulePayoutRow}>
+          <View style={styles.scheduleLeftGroup}>
+            <View style={styles.scheduleBadge}>
+              <Ionicons name="calendar-outline" size={13} color={colors.primary} />
+              <Text style={styles.scheduleBadgeText}>{item.date}</Text>
+            </View>
+            <View style={styles.scheduleBadge}>
+              <Ionicons name="time-outline" size={13} color={colors.primary} />
+              <Text style={styles.scheduleBadgeText}>{item.timeSlot}</Text>
+            </View>
           </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.metaText}>{item.timeSlot}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.metaText}>
-              Fee ₹{item.fee} - ₹50 = <Text style={styles.netAmount}>₹{item.netPayout} Net</Text>
-            </Text>
+
+          <View style={styles.consultPayoutPill}>
+            <Ionicons name="cash-outline" size={13} color="#15803D" />
+            <Text style={styles.consultPayoutText}>₹{item.netPayout} Net Payout</Text>
           </View>
         </View>
 
-        {/* Digital Prescription Info if uploaded */}
+        {/* 4. Digital Prescription Info if uploaded */}
         {item.prescriptionUploaded && item.prescription && (
           <View style={styles.rxSummaryBox}>
             <View style={styles.rxSummaryHeader}>
               <Ionicons name="document-text" size={14} color={colors.primary} />
-              <Text style={styles.rxSummaryTitle}>
+              <Text style={styles.rxSummaryTitle} numberOfLines={1}>
                 Digital Rx Issued: {item.prescription.diagnosis}
               </Text>
             </View>
@@ -392,46 +418,63 @@ export default function BookingsOrdersScreen() {
             <Text style={styles.rxSummaryAdvice}>Advice: {item.prescription.advice}</Text>
             <View style={styles.rxSentChannelsRow}>
               <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-              <Text style={styles.rxSentChannelsText}>Sent to patient App, Email & WhatsApp</Text>
+              <Text style={styles.rxSentChannelsText}>Dispatched to patient App, Email & WhatsApp</Text>
             </View>
           </View>
         )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionsBar}>
-          {item.status !== 'completed' && (
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.medicalBlue }]}
-              onPress={() => navigation.navigate('LiveMeeting', { consultation: item })}
-            >
-              <Ionicons name="videocam" size={14} color="#FFFFFF" />
-              <Text style={styles.actionBtnText}>Join Meeting Link</Text>
-            </Pressable>
-          )}
+        {/* 5. Action Buttons */}
+        <View style={styles.consultActionsWrap}>
+          {item.status !== 'completed' ? (
+            <>
+              <Pressable
+                style={styles.joinMeetingPrimaryBtn}
+                onPress={() => navigation.navigate('LiveMeeting', { consultation: item })}
+                accessibilityLabel="Join Video Meeting"
+              >
+                <Ionicons name="videocam" size={16} color="#FFFFFF" />
+                <Text style={styles.joinMeetingPrimaryBtnText}>Join Video Consultation</Text>
+              </Pressable>
 
-          <Pressable
-            style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-            onPress={() => {
-              setSelectedConsultationForRx(item);
-              setRxModalVisible(true);
-            }}
-          >
-            <Ionicons name="create-outline" size={14} color="#FFFFFF" />
-            <Text style={styles.actionBtnText}>
-              {item.prescriptionUploaded ? 'Edit Digital Rx' : 'Write Rx & Notes'}
-            </Text>
-          </Pressable>
+              <View style={styles.secondaryActionsRow}>
+                <Pressable
+                  style={styles.writeRxSecondaryBtn}
+                  onPress={() => {
+                    setSelectedConsultationForRx(item);
+                    setRxModalVisible(true);
+                  }}
+                  accessibilityLabel="Write Prescription and Notes"
+                >
+                  <Ionicons name="create-outline" size={14} color={colors.primary} />
+                  <Text style={styles.writeRxSecondaryBtnText}>
+                    {item.prescriptionUploaded ? 'Edit Digital Rx' : 'Write Rx & Notes'}
+                  </Text>
+                </Pressable>
 
-          {item.status !== 'completed' && (
+                <Pressable
+                  style={styles.noShowSecondaryBtn}
+                  onPress={() => {
+                    updateConsultationStatus(item.id, 'no_show');
+                    Alert.alert('Marked No-show', 'Patient did not attend online video call.');
+                  }}
+                  accessibilityLabel="Mark Patient No-show"
+                >
+                  <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
+                  <Text style={styles.noShowSecondaryBtnText}>No-show</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
             <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.warning }]}
+              style={styles.viewRxCompletedBtn}
               onPress={() => {
-                updateConsultationStatus(item.id, 'no_show');
-                Alert.alert('Marked No-show', 'Patient did not attend online video call.');
+                setSelectedConsultationForRx(item);
+                setRxModalVisible(true);
               }}
+              accessibilityLabel="View or Edit Digital Prescription"
             >
-              <Ionicons name="alert-circle-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.actionBtnText}>No-show</Text>
+              <Ionicons name="document-text-outline" size={15} color="#FFFFFF" />
+              <Text style={styles.viewRxCompletedBtnText}>View / Edit Digital Rx</Text>
             </Pressable>
           )}
         </View>
@@ -442,35 +485,59 @@ export default function BookingsOrdersScreen() {
   const renderHomeVisitItem = ({ item }: { item: HomeVisitRequest }) => {
     return (
       <Card style={styles.bookingCard}>
+        {/* 1. Header: Patient Name & Status Badge */}
         <View style={styles.cardHeader}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.titleRow}>
-              <Text style={styles.patientName}>{item.patientName}</Text>
+          <View style={styles.headerLeftBlock}>
+            <Text style={styles.patientName} numberOfLines={1}>
+              {item.patientName}
+            </Text>
+            <View style={styles.subHeaderRow}>
               <View style={[styles.onlineBadge, { backgroundColor: colors.primaryLight }]}>
                 <Ionicons name="car" size={12} color={colors.primary} />
                 <Text style={[styles.onlineBadgeText, { color: colors.primary }]}>
                   Home Visit ({item.distanceKm} km away)
                 </Text>
               </View>
+              <Text style={styles.patientMetaDot}>•</Text>
+              <Text style={styles.patientMetaText}>
+                {item.patientGender}, {item.patientAge} yrs
+              </Text>
+              <Text style={styles.patientMetaDot}>•</Text>
+              <Text style={styles.patientMetaPhone}>📞 {item.patientPhone}</Text>
             </View>
-            <Text style={styles.phoneText}>
-              {item.patientGender}, {item.patientAge} yrs • 📞 {item.patientPhone}
-            </Text>
           </View>
+
           <View
             style={[
               styles.statusBadge,
               item.status === 'completed'
-                ? { backgroundColor: colors.successLight }
+                ? { backgroundColor: colors.successLight, borderColor: '#86EFAC' }
                 : item.status === 'reached'
-                ? { backgroundColor: colors.infoLight }
+                ? { backgroundColor: colors.infoLight, borderColor: '#93C5FD' }
                 : item.status === 'on_the_way'
-                ? { backgroundColor: colors.purpleLight }
+                ? { backgroundColor: colors.purpleLight, borderColor: '#D8B4FE' }
                 : item.status === 'accepted'
-                ? { backgroundColor: colors.primaryLight }
-                : { backgroundColor: colors.warningLight },
+                ? { backgroundColor: colors.primaryLight, borderColor: '#93C5FD' }
+                : { backgroundColor: colors.warningLight, borderColor: '#FDE68A' },
             ]}
           >
+            <View
+              style={[
+                styles.statusDot,
+                {
+                  backgroundColor:
+                    item.status === 'completed'
+                      ? colors.success
+                      : item.status === 'reached'
+                      ? colors.info
+                      : item.status === 'on_the_way'
+                      ? colors.purple
+                      : item.status === 'accepted'
+                      ? colors.primary
+                      : colors.warning,
+                },
+              ]}
+            />
             <Text
               style={[
                 styles.statusBadgeText,
@@ -490,12 +557,20 @@ export default function BookingsOrdersScreen() {
           </View>
         </View>
 
-        {/* Address and Navigation */}
+        {/* 2. Address & Navigation Box */}
         <View style={styles.addressBox}>
-          <Ionicons name="location" size={16} color={colors.danger} />
+          <View style={styles.addressIconWrap}>
+            <Ionicons name="location" size={17} color={colors.danger} />
+          </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.addressText}>{item.address}</Text>
-            {item.landmark && <Text style={styles.landmarkText}>Landmark: {item.landmark}</Text>}
+            <Text style={styles.addressText} numberOfLines={2}>
+              {item.address}
+            </Text>
+            {item.landmark && (
+              <Text style={styles.landmarkText} numberOfLines={1}>
+                Landmark: {item.landmark}
+              </Text>
+            )}
           </View>
           <Pressable
             style={styles.navMapBtn}
@@ -505,47 +580,58 @@ export default function BookingsOrdersScreen() {
                 `Launching turn-by-turn navigation to: ${item.address} (approx ${item.distanceKm} km)`,
               );
             }}
+            hitSlop={6}
           >
             <Ionicons name="navigate" size={13} color="#FFFFFF" />
             <Text style={styles.navMapBtnText}>Navigate</Text>
           </Pressable>
         </View>
 
+        {/* 3. Problem / Symptoms Box */}
         <View style={styles.problemBox}>
-          <Text style={styles.problemLabel}>Symptoms & Chief Complaints</Text>
+          <View style={styles.problemHeader}>
+            <Ionicons name="medical" size={13} color={colors.primary} />
+            <Text style={styles.problemLabel}>Symptoms & Chief Complaints</Text>
+          </View>
           <Text style={styles.problemContent}>{item.problemDescription}</Text>
         </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.metaText}>{item.date}</Text>
+        {/* 4. Schedule & Payout Bar */}
+        <View style={styles.schedulePayoutRow}>
+          <View style={styles.scheduleLeftGroup}>
+            <View style={styles.scheduleBadge}>
+              <Ionicons name="calendar-outline" size={13} color={colors.primary} />
+              <Text style={styles.scheduleBadgeText}>{item.date}</Text>
+            </View>
+            <View style={styles.scheduleBadge}>
+              <Ionicons name="time-outline" size={13} color={colors.primary} />
+              <Text style={styles.scheduleBadgeText}>{item.timeSlot}</Text>
+            </View>
           </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.metaText}>{item.timeSlot}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.metaText}>
-              Fee ₹{item.fee} - ₹50 = <Text style={styles.netAmount}>₹{item.netPayout} Net</Text>
-            </Text>
+
+          <View style={styles.consultPayoutPill}>
+            <Ionicons name="cash-outline" size={13} color="#15803D" />
+            <Text style={styles.consultPayoutText}>₹{item.netPayout} Net Payout</Text>
           </View>
         </View>
 
+        {/* 5. Visit Notes if uploaded */}
         {item.prescriptionNotes && (
           <View style={styles.rxSummaryBox}>
-            <Text style={styles.rxSummaryTitle}>Visit Notes & Rx Uploaded</Text>
+            <View style={styles.rxSummaryHeader}>
+              <Ionicons name="document-text" size={14} color={colors.primary} />
+              <Text style={styles.rxSummaryTitle}>Visit Notes & Rx Uploaded</Text>
+            </View>
             <Text style={styles.rxSummaryAdvice}>{item.prescriptionNotes}</Text>
           </View>
         )}
 
-        {/* Home Visit Status Progression Buttons */}
-        <View style={styles.actionsBar}>
+        {/* 6. Home Visit Status Progression Buttons */}
+        <View style={styles.consultActionsWrap}>
           {item.status === 'pending' && (
-            <>
+            <View style={styles.secondaryActionsRow}>
               <Pressable
-                style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                style={[styles.homeVisitActionBtn, { backgroundColor: colors.success }]}
                 onPress={() => {
                   acceptHomeVisit(item.id);
                   Alert.alert(
@@ -554,52 +640,52 @@ export default function BookingsOrdersScreen() {
                   );
                 }}
               >
-                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-                <Text style={styles.actionBtnText}>Accept Request</Text>
+                <Ionicons name="checkmark-circle" size={15} color="#FFFFFF" />
+                <Text style={styles.homeVisitActionBtnText}>Accept Request</Text>
               </Pressable>
 
               <Pressable
-                style={[styles.actionBtn, { backgroundColor: colors.danger }]}
+                style={[styles.homeVisitActionBtn, { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FCA5A5' }]}
                 onPress={() => {
                   declineHomeVisit(item.id);
                   Alert.alert('Visit Declined', 'The request has been returned to dispatch.');
                 }}
               >
-                <Ionicons name="close" size={14} color="#FFFFFF" />
-                <Text style={styles.actionBtnText}>Decline</Text>
+                <Ionicons name="close-circle" size={15} color={colors.danger} />
+                <Text style={[styles.homeVisitActionBtnText, { color: colors.danger }]}>Decline</Text>
               </Pressable>
-            </>
+            </View>
           )}
 
           {item.status === 'accepted' && (
             <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.info }]}
+              style={[styles.homeVisitFullBtn, { backgroundColor: colors.info }]}
               onPress={() => {
                 updateHomeVisitStatus(item.id, 'on_the_way');
                 Alert.alert('Status Updated', 'Patient notified: Doctor is ON THE WAY.');
               }}
             >
-              <Ionicons name="bicycle" size={14} color="#FFFFFF" />
-              <Text style={styles.actionBtnText}>Update: On The Way</Text>
+              <Ionicons name="bicycle" size={16} color="#FFFFFF" />
+              <Text style={styles.homeVisitFullBtnText}>Update: On The Way to Patient</Text>
             </Pressable>
           )}
 
           {item.status === 'on_the_way' && (
             <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.purple }]}
+              style={[styles.homeVisitFullBtn, { backgroundColor: colors.purple }]}
               onPress={() => {
                 updateHomeVisitStatus(item.id, 'reached');
                 Alert.alert('Status Updated', 'Patient notified: Doctor has REACHED the doorstep.');
               }}
             >
-              <Ionicons name="location" size={14} color="#FFFFFF" />
-              <Text style={styles.actionBtnText}>Update: Reached</Text>
+              <Ionicons name="location" size={16} color="#FFFFFF" />
+              <Text style={styles.homeVisitFullBtnText}>Update: Reached Patient Doorstep</Text>
             </Pressable>
           )}
 
           {item.status === 'reached' && (
             <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.success }]}
+              style={[styles.homeVisitFullBtn, { backgroundColor: colors.success }]}
               onPress={() => {
                 updateHomeVisitStatus(
                   item.id,
@@ -612,8 +698,8 @@ export default function BookingsOrdersScreen() {
                 );
               }}
             >
-              <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
-              <Text style={styles.actionBtnText}>Complete & Record Rx</Text>
+              <Ionicons name="checkmark-done" size={16} color="#FFFFFF" />
+              <Text style={styles.homeVisitFullBtnText}>Complete Visit & Record Rx</Text>
             </Pressable>
           )}
         </View>
@@ -909,7 +995,7 @@ export default function BookingsOrdersScreen() {
             onPress={() => setDoctorSubTab('consultations')}
           >
             <Ionicons
-              name="videocam-outline"
+              name={doctorSubTab === 'consultations' ? 'videocam' : 'videocam-outline'}
               size={15}
               color={doctorSubTab === 'consultations' ? '#FFFFFF' : colors.textSecondary}
             />
@@ -931,7 +1017,7 @@ export default function BookingsOrdersScreen() {
             onPress={() => setDoctorSubTab('home_visits')}
           >
             <Ionicons
-              name="car-outline"
+              name={doctorSubTab === 'home_visits' ? 'car' : 'car-outline'}
               size={15}
               color={doctorSubTab === 'home_visits' ? '#FFFFFF' : colors.textSecondary}
             />
@@ -1456,8 +1542,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.card,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingBottom: 10,
+    paddingTop: 4,
     gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   doctorSubTabBtn: {
     flex: 1,
@@ -1465,11 +1554,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
+    height: 38,
     borderRadius: radius.md,
-    backgroundColor: colors.background,
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: '#E2E8F0',
   },
   doctorSubTabBtnActive: {
     backgroundColor: colors.medicalBlue,
@@ -1488,10 +1577,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.card,
     marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    marginTop: 10,
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    height: 42,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -1536,13 +1625,18 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   bookingCard: {
-    padding: spacing.md,
+    padding: 14,
+    borderRadius: radius.lg,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: spacing.xs,
+    marginBottom: 6,
+    gap: 8,
+  },
+  headerLeftBlock: {
+    flex: 1,
   },
   titleRow: {
     flexDirection: 'row',
@@ -1554,6 +1648,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: colors.text,
+    lineHeight: 20,
+  },
+  subHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 5,
+    marginTop: 4,
+  },
+  patientMetaDot: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  patientMetaText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  patientMetaPhone: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   genderAgePill: {
     fontSize: 11,
@@ -1579,14 +1695,25 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: radius.sm,
   },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
+  },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
   },
   statusBadgeText: {
     fontSize: 10,
     fontWeight: '800',
+    letterSpacing: 0.3,
   },
   doctorBlock: {
     flexDirection: 'row',
@@ -1602,22 +1729,82 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   problemBox: {
-    backgroundColor: colors.background,
-    padding: spacing.sm,
+    backgroundColor: '#F8FAFC',
+    padding: 10,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     marginVertical: 6,
+  },
+  problemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 4,
   },
   problemLabel: {
     fontSize: 10,
     fontWeight: '800',
     color: colors.textMuted,
     textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   problemContent: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 2,
-    lineHeight: 16,
+    lineHeight: 17,
+  },
+  schedulePayoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    marginVertical: 4,
+    gap: 8,
+  },
+  scheduleLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  scheduleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.card,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: radius.xs,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  scheduleBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  consultPayoutPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  consultPayoutText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803D',
   },
   metaRow: {
     flexDirection: 'row',
@@ -1667,6 +1854,85 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: '600',
   },
+  consultActionsWrap: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    gap: 8,
+  },
+  joinMeetingPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.medicalBlue,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    minHeight: 40,
+  },
+  joinMeetingPrimaryBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  writeRxSecondaryBtn: {
+    flex: 1.6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    minHeight: 38,
+  },
+  writeRxSecondaryBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  noShowSecondaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    minHeight: 38,
+  },
+  noShowSecondaryBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  viewRxCompletedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 9,
+    borderRadius: radius.md,
+    minHeight: 38,
+  },
+  viewRxCompletedBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   actionsBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1684,6 +1950,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 8,
     borderRadius: radius.md,
+    minHeight: 38,
   },
   actionBtnText: {
     fontSize: 11,
@@ -1707,11 +1974,21 @@ const styles = StyleSheet.create({
   addressBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.background,
-    padding: spacing.sm,
+    gap: 10,
+    backgroundColor: '#F8FAFC',
+    padding: 10,
     borderRadius: radius.md,
-    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    marginVertical: 5,
+  },
+  addressIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addressText: {
     fontSize: 12,
@@ -1734,6 +2011,35 @@ const styles = StyleSheet.create({
   navMapBtnText: {
     fontSize: 11,
     fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  homeVisitActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: radius.md,
+    minHeight: 38,
+  },
+  homeVisitActionBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  homeVisitFullBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: radius.md,
+    minHeight: 38,
+  },
+  homeVisitFullBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
     color: '#FFFFFF',
   },
   rxSummaryBox: {

@@ -243,18 +243,7 @@ export default function DashboardScreen() {
         </View>
 
         {/* Top Right Header Actions: Notifications Icon */}
-        {/* Top Right Header Actions: Registration button & Notifications Icon */}
         <View style={styles.headerRightActions}>
-          <Pressable
-            style={styles.registrationNavBtn}
-            onPress={() => navigation.navigate('Register' as any)}
-            accessibilityLabel="Open Provider Registration"
-            hitSlop={6}
-          >
-            <Ionicons name="create-outline" size={13} color={colors.primary} />
-            <Text style={styles.registrationNavBtnText}>Registration</Text>
-          </Pressable>
-
           {/* Notifications Icon with Badge */}
           <Pressable
             style={styles.iconBtn}
@@ -938,22 +927,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
-  },
-  registrationNavBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  registrationNavBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
   },
   providerInfo: {
     flexDirection: 'row',
