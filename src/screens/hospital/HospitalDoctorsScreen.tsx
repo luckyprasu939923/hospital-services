@@ -136,7 +136,7 @@ export default function HospitalDoctorsScreen() {
                   hitSlop={6}
                   accessibilityLabel="Edit Doctor Registration"
                 >
-                  <Ionicons name="create-outline" size={19} color={colors.primary} />
+                  <Ionicons name="create-outline" size={19} color={colors.hospitalBlue} />
                 </Pressable>
               </View>
             </View>
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   issueChip: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.hospitalBlueLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: radius.sm,
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   issueChipText: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.primaryDark,
+    color: colors.hospitalBlue,
   },
   leaveBar: {
     flexDirection: 'row',
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   modalNotice: {
     flexDirection: 'row',
     gap: 6,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.hospitalBlueLight,
     padding: spacing.sm,
     borderRadius: radius.md,
     marginTop: spacing.md,
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   modalNoticeText: {
     flex: 1,
     fontSize: 11,
-    color: colors.primaryDark,
+    color: colors.hospitalBlue,
     lineHeight: 15,
   },
   modalBtnRow: {

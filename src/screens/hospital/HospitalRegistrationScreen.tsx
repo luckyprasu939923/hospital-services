@@ -363,7 +363,7 @@ export default function HospitalRegistrationScreen({
               <Text style={styles.statLabel}>Surgical OTs</Text>
             </View>
             <View style={styles.statBox}>
-              <Ionicons name="flash" size={20} color="#D97706" />
+              <Ionicons name="flash" size={20} color="#0094D4" />
               <Text style={styles.statNumber}>{hasEmergency24x7 ? '24/7' : 'Day'}</Text>
               <Text style={styles.statLabel}>Casualty Desk</Text>
             </View>
@@ -397,14 +397,14 @@ export default function HospitalRegistrationScreen({
               onPress={() => navigation.navigate('HospitalPackages')}
               accessibilityLabel="Manage Health Packages"
             >
-              <View style={[styles.actionIconWrap, { backgroundColor: '#E0F2FE' }]}>
-                <Ionicons name="cube" size={22} color="#0284C7" />
+              <View style={[styles.actionIconWrap, { backgroundColor: '#E6F6FC' }]}>
+                <Ionicons name="cube" size={22} color="#0094D4" />
               </View>
               <Text style={styles.actionCardTitle}>Health Packages</Text>
               <Text style={styles.actionCardSub}>Preventive health checkup plans</Text>
               <View style={styles.actionLinkRow}>
-                <Text style={[styles.actionLinkText, { color: '#0284C7' }]}>Open Packages</Text>
-                <Ionicons name="arrow-forward" size={12} color="#0284C7" />
+                <Text style={[styles.actionLinkText, { color: '#0094D4' }]}>Open Packages</Text>
+                <Ionicons name="arrow-forward" size={12} color="#0094D4" />
               </View>
             </Pressable>
 
@@ -429,14 +429,14 @@ export default function HospitalRegistrationScreen({
               onPress={() => setIsRegistered(false)}
               accessibilityLabel="Edit Hospital Facility"
             >
-              <View style={[styles.actionIconWrap, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="create-outline" size={22} color="#D97706" />
+              <View style={[styles.actionIconWrap, { backgroundColor: '#E6F6FC' }]}>
+                <Ionicons name="create-outline" size={22} color="#0094D4" />
               </View>
               <Text style={styles.actionCardTitle}>Edit Facility Info</Text>
               <Text style={styles.actionCardSub}>Update licenses, beds & phone</Text>
               <View style={styles.actionLinkRow}>
-                <Text style={[styles.actionLinkText, { color: '#D97706' }]}>Edit Setup</Text>
-                <Ionicons name="arrow-forward" size={12} color="#D97706" />
+                <Text style={[styles.actionLinkText, { color: '#0094D4' }]}>Edit Setup</Text>
+                <Ionicons name="arrow-forward" size={12} color="#0094D4" />
               </View>
             </Pressable>
           </View>

@@ -104,7 +104,7 @@ export default function MainTabs() {
           tabBarLabel: getBookingsLabel(),
           tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
           tabBarBadgeStyle: {
-            backgroundColor: colors.hospitalRed,
+            backgroundColor: colors.hospitalBlue,
             color: '#FFFFFF',
             fontSize: 10,
             fontWeight: '800',

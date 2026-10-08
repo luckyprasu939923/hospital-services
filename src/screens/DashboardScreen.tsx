@@ -493,8 +493,8 @@ export default function DashboardScreen() {
                 style={styles.actionItem}
                 onPress={() => navigation.navigate('HospitalPackages')}
               >
-                <View style={[styles.actionIconWrap, { backgroundColor: colors.purpleLight }]}>
-                  <Ionicons name="gift-outline" size={20} color={colors.purple} />
+                <View style={[styles.actionIconWrap, { backgroundColor: colors.hospitalBlueLight }]}>
+                  <Ionicons name="cube-outline" size={20} color={colors.hospitalBlue} />
                 </View>
                 <Text style={styles.actionLabel}>Health Packages</Text>
                 <Text style={styles.actionSubLabel}>Promos & Deals</Text>

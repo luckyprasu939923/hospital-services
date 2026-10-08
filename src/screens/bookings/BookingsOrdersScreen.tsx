@@ -560,7 +560,7 @@ export default function BookingsOrdersScreen() {
         {/* 2. Address & Navigation Box */}
         <View style={styles.addressBox}>
           <View style={styles.addressIconWrap}>
-            <Ionicons name="location" size={17} color={colors.danger} />
+            <Ionicons name="location" size={17} color={colors.hospitalBlue} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.addressText} numberOfLines={2}>
@@ -1986,7 +1986,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.hospitalBlueLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2003,7 +2003,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.hospitalBlue,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: radius.sm,

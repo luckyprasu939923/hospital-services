@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.purple,
+    backgroundColor: colors.hospitalBlue,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: radius.md,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   noticeBox: {
     flexDirection: 'row',
     gap: 6,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.hospitalBlueLight,
     padding: spacing.sm,
     borderRadius: radius.md,
     marginTop: spacing.md,
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   noticeText: {
     flex: 1,
     fontSize: 11,
-    color: colors.primaryDark,
+    color: colors.hospitalBlue,
     lineHeight: 15,
   },
   modalBtnRow: {
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: radius.md,
     alignItems: 'center',
-    backgroundColor: colors.purple,
+    backgroundColor: colors.hospitalBlue,
   },
   submitBtnText: {
     fontSize: 13,
