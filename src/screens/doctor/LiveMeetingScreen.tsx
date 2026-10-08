@@ -22,8 +22,26 @@ type LiveMeetingRouteProp = RouteProp<RootStackParamList, 'LiveMeeting'>;
 export default function LiveMeetingScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<LiveMeetingRouteProp>();
-  const { consultation } = route.params;
-  const { uploadPrescription, updateConsultationStatus } = useApp();
+  const { uploadPrescription, updateConsultationStatus, consultations } = useApp();
+
+  const fallbackConsultation = consultations[0] || {
+    id: 'CON-501',
+    doctorId: 'doc-01',
+    patientName: 'Ramesh Sundaram',
+    patientAge: 52,
+    patientGender: 'Male' as const,
+    patientPhone: '+91 98450 11992',
+    problemDescription: 'High BP recorded (150/95 mmHg) for past 4 days. Feeling dizzy in evenings.',
+    date: new Date().toISOString().slice(0, 10),
+    timeSlot: '04:00 PM',
+    meetingLink: 'https://meet.onebuddy.health/live/dr-vikram-c501',
+    status: 'upcoming' as const,
+    fee: 750,
+    platformFee: 50,
+    netPayout: 700,
+    prescriptionUploaded: false,
+  };
+  const consultation = route.params?.consultation || fallbackConsultation;
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);

@@ -454,7 +454,10 @@ export default function DoctorRegistrationScreen({
           <View style={styles.actionGrid}>
             <Pressable
               style={styles.actionCard}
-              onPress={() => navigation.navigate('Main', { screen: 'BookingsOrders' } as any)}
+              onPress={() => {
+                switchProviderMode('doctor');
+                navigation.navigate('DoctorConsultations');
+              }}
               accessibilityLabel="View Consultations"
             >
               <View style={[styles.actionIconWrap, { backgroundColor: '#DBEAFE' }]}>
@@ -470,7 +473,10 @@ export default function DoctorRegistrationScreen({
 
             <Pressable
               style={styles.actionCard}
-              onPress={() => navigation.navigate('DoctorHomeVisits')}
+              onPress={() => {
+                switchProviderMode('doctor');
+                navigation.navigate('DoctorHomeVisits');
+              }}
               accessibilityLabel="Manage Home Visits"
             >
               <View style={[styles.actionIconWrap, { backgroundColor: '#FEF3C7' }]}>

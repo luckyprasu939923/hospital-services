@@ -14,6 +14,8 @@ import PharmacyRegistrationScreen from '../screens/pharmacy/PharmacyRegistration
 import HospitalDoctorsScreen from '../screens/hospital/HospitalDoctorsScreen';
 import HospitalPackagesScreen from '../screens/hospital/HospitalPackagesScreen';
 import LiveMeetingScreen from '../screens/doctor/LiveMeetingScreen';
+import RegisterDoctorScreen from '../screens/doctor/RegisterDoctorScreen';
+import BookingsOrdersScreen from '../screens/bookings/BookingsOrdersScreen';
 import PharmacyInventoryScreen from '../screens/pharmacy/PharmacyInventoryScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import SupportChatScreen from '../screens/support/SupportChatScreen';
@@ -51,8 +53,10 @@ export default function AppNavigator() {
       <Stack.Screen name="PharmacyRegistration" component={PharmacyRegistrationScreen} />
 
       {/* Doctor Module Screens & Aliases */}
-      <Stack.Screen name="RegisterDoctor" component={DoctorRegistrationScreen} />
-      <Stack.Screen name="AddEditDoctor" component={DoctorRegistrationScreen} />
+      <Stack.Screen name="RegisterDoctor" component={RegisterDoctorScreen} />
+      <Stack.Screen name="AddEditDoctor" component={RegisterDoctorScreen} />
+      <Stack.Screen name="DoctorConsultations" component={BookingsOrdersScreen} />
+      <Stack.Screen name="DoctorHomeVisits" component={BookingsOrdersScreen} />
       <Stack.Screen
         name="LiveMeeting"
         component={LiveMeetingScreen}
@@ -65,6 +69,7 @@ export default function AppNavigator() {
 
       {/* Pharmacy Module Screens */}
       <Stack.Screen name="PharmacyInventory" component={PharmacyInventoryScreen} />
+      <Stack.Screen name="PharmacyOrders" component={BookingsOrdersScreen} />
 
       {/* Common Partner Support & Notifications */}
       <Stack.Screen name="Notifications" component={NotificationsScreen} />

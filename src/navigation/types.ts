@@ -27,7 +27,7 @@ export type RootStackParamList = {
   AddEditDoctor?: { doctor?: HospitalDoctor };
   HospitalPackages: undefined;
   DoctorConsultations: undefined;
-  LiveMeeting: { consultation: OnlineConsultation };
+  LiveMeeting?: { consultation?: OnlineConsultation };
   DoctorHomeVisits: undefined;
   PharmacyInventory: undefined;
   PharmacyOrders: undefined;
