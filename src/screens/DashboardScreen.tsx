@@ -29,7 +29,7 @@ const HEALTHCARE_CATEGORIES = [
     icon: 'business' as const,
     color: colors.hospitalRed,
     lightBg: colors.hospitalRedLight,
-    borderColor: '#FECACA',
+    borderColor: '#BAE6F9',
   },
   {
     id: 'pharmacy' as ProviderType,

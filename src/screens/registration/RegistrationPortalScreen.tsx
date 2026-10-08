@@ -34,9 +34,9 @@ const CATEGORIES: {
     title: 'Hospital',
     badge: 'Super Speciality',
     icon: 'business',
-    color: '#DC2626',
-    lightBg: '#FEF2F2',
-    borderColor: '#FECACA',
+    color: '#0094D4',
+    lightBg: '#E6F6FC',
+    borderColor: '#BAE6F9',
     stackRoute: 'HospitalRegistration',
   },
   {

@@ -19,8 +19,11 @@ export const colors = {
   doctorBanner: '#38BDF8', // Light sky blue for doctor banner
   medicalBlueDark: '#0284C7',
   medicalBlueLight: '#E0F2FE',
-  hospitalRed: '#E11D48', // Hospital / Emergency / OP
-  hospitalRedLight: '#FFE4E6',
+  hospitalRed: '#0094D4', // Hospital / Emergency / OP (Theme Blue from swatch #0094D4)
+  hospitalRedLight: '#E6F6FC',
+  hospitalBlue: '#0094D4',
+  hospitalBlueLight: '#E6F6FC',
+  hospitalBlueBorder: '#BAE6F9',
   pharmacyTeal: '#0D9488', // Pharmacy / Medicine Delivery
   pharmacyTealLight: '#CCFBF1',
 

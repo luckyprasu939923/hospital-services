@@ -265,7 +265,7 @@ export default function HospitalRegistrationScreen({
           </Pressable>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="business" size={18} color="#EF4444" />
+              <Ionicons name="business" size={18} color="#0094D4" />
               <Text style={styles.headerTitle} numberOfLines={1}>{hospitalName}</Text>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -342,13 +342,13 @@ export default function HospitalRegistrationScreen({
 
           {/* Infrastructure Metrics Overview */}
           <View style={styles.sectionHeader}>
-            <Ionicons name="stats-chart" size={17} color="#DC2626" />
+            <Ionicons name="stats-chart" size={17} color="#0094D4" />
             <Text style={styles.sectionTitle}>Hospital Infrastructure & Bed Capacity</Text>
           </View>
 
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
-              <Ionicons name="bed" size={20} color="#DC2626" />
+              <Ionicons name="bed" size={20} color="#0094D4" />
               <Text style={styles.statNumber}>{totalBeds}</Text>
               <Text style={styles.statLabel}>Total Beds</Text>
             </View>
@@ -371,7 +371,7 @@ export default function HospitalRegistrationScreen({
 
           {/* Hospital Management Actions */}
           <View style={styles.sectionHeader}>
-            <Ionicons name="grid-outline" size={17} color="#DC2626" />
+            <Ionicons name="grid-outline" size={17} color="#0094D4" />
             <Text style={styles.sectionTitle}>Hospital Service Modules</Text>
           </View>
 
@@ -381,14 +381,14 @@ export default function HospitalRegistrationScreen({
               onPress={() => navigation.navigate('HospitalDoctors')}
               accessibilityLabel="Manage Doctor Rosters"
             >
-              <View style={[styles.actionIconWrap, { backgroundColor: '#FEE2E2' }]}>
-                <Ionicons name="people" size={22} color="#DC2626" />
+              <View style={[styles.actionIconWrap, { backgroundColor: '#E6F6FC' }]}>
+                <Ionicons name="people" size={22} color="#0094D4" />
               </View>
               <Text style={styles.actionCardTitle}>Doctor Rosters</Text>
               <Text style={styles.actionCardSub}>Manage OPD consulting specialists</Text>
               <View style={styles.actionLinkRow}>
                 <Text style={styles.actionLinkText}>Open Rosters</Text>
-                <Ionicons name="arrow-forward" size={12} color="#DC2626" />
+                <Ionicons name="arrow-forward" size={12} color="#0094D4" />
               </View>
             </Pressable>
 
@@ -499,7 +499,7 @@ export default function HospitalRegistrationScreen({
 
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="business" size={17} color="#EF4444" />
+              <Ionicons name="business" size={17} color="#0094D4" />
               <Text style={styles.headerTitle}>Hospital Registration</Text>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -591,7 +591,7 @@ export default function HospitalRegistrationScreen({
               <Card style={styles.themeBannerCard} padding="lg">
                 <View style={styles.bannerRow}>
                   <View style={styles.themeBannerIconBadge}>
-                    <Ionicons name="business" size={26} color="#DC2626" />
+                    <Ionicons name="business" size={26} color="#0094D4" />
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.md }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -608,7 +608,7 @@ export default function HospitalRegistrationScreen({
               </Card>
 
               <View style={styles.sectionHeader}>
-                <Ionicons name="shield-checkmark" size={18} color="#DC2626" />
+                <Ionicons name="shield-checkmark" size={18} color="#0094D4" />
                 <Text style={styles.sectionTitle}>1. Hospital Identity & Bed Capacity</Text>
               </View>
 
@@ -690,8 +690,8 @@ export default function HospitalRegistrationScreen({
                     <Switch
                       value={hasEmergency24x7}
                       onValueChange={setHasEmergency24x7}
-                      trackColor={{ false: '#CBD5E1', true: '#FECACA' }}
-                      thumbColor={hasEmergency24x7 ? '#DC2626' : '#FFFFFF'}
+                      trackColor={{ false: '#CBD5E1', true: '#BAE6F9' }}
+                      thumbColor={hasEmergency24x7 ? '#0094D4' : '#FFFFFF'}
                     />
                   </View>
 
@@ -703,8 +703,8 @@ export default function HospitalRegistrationScreen({
                     <Switch
                       value={hasBloodBank}
                       onValueChange={setHasBloodBank}
-                      trackColor={{ false: '#CBD5E1', true: '#FECACA' }}
-                      thumbColor={hasBloodBank ? '#DC2626' : '#FFFFFF'}
+                      trackColor={{ false: '#CBD5E1', true: '#BAE6F9' }}
+                      thumbColor={hasBloodBank ? '#0094D4' : '#FFFFFF'}
                     />
                   </View>
 
@@ -716,8 +716,8 @@ export default function HospitalRegistrationScreen({
                     <Switch
                       value={hasRadiology}
                       onValueChange={setHasRadiology}
-                      trackColor={{ false: '#CBD5E1', true: '#FECACA' }}
-                      thumbColor={hasRadiology ? '#DC2626' : '#FFFFFF'}
+                      trackColor={{ false: '#CBD5E1', true: '#BAE6F9' }}
+                      thumbColor={hasRadiology ? '#0094D4' : '#FFFFFF'}
                     />
                   </View>
 
@@ -729,8 +729,8 @@ export default function HospitalRegistrationScreen({
                     <Switch
                       value={hasAmbulanceFleet}
                       onValueChange={setHasAmbulanceFleet}
-                      trackColor={{ false: '#CBD5E1', true: '#FECACA' }}
-                      thumbColor={hasAmbulanceFleet ? '#DC2626' : '#FFFFFF'}
+                      trackColor={{ false: '#CBD5E1', true: '#BAE6F9' }}
+                      thumbColor={hasAmbulanceFleet ? '#0094D4' : '#FFFFFF'}
                     />
                   </View>
                 </View>
@@ -751,7 +751,7 @@ export default function HospitalRegistrationScreen({
                         <Ionicons
                           name={selected ? 'checkmark-circle' : 'add-circle-outline'}
                           size={14}
-                          color={selected ? '#DC2626' : colors.textMuted}
+                          color={selected ? '#0094D4' : colors.textMuted}
                         />
                         <Text style={[styles.deptChipText, selected && styles.deptChipTextSelected]}>
                           {dept}
@@ -778,7 +778,7 @@ export default function HospitalRegistrationScreen({
           {currentStep === 2 && (
             <>
               <View style={styles.sectionHeader}>
-                <Ionicons name="document-text" size={18} color="#DC2626" />
+                <Ionicons name="document-text" size={18} color="#0094D4" />
                 <Text style={styles.sectionTitle}>2. Regulatory Licenses & Accreditations</Text>
               </View>
 
@@ -856,7 +856,7 @@ export default function HospitalRegistrationScreen({
           {currentStep === 3 && (
             <>
               <View style={styles.sectionHeader}>
-                <Ionicons name="call" size={18} color="#DC2626" />
+                <Ionicons name="call" size={18} color="#0094D4" />
                 <Text style={styles.sectionTitle}>3. Administrative Phone & Premises</Text>
               </View>
 
@@ -899,7 +899,7 @@ export default function HospitalRegistrationScreen({
                         <Ionicons
                           name={isSelected ? 'radio-button-on' : 'radio-button-off'}
                           size={15}
-                          color={isSelected ? '#DC2626' : colors.textMuted}
+                          color={isSelected ? '#0094D4' : colors.textMuted}
                         />
                         <View style={{ flex: 1, marginLeft: 6 }}>
                           <Text
@@ -1050,13 +1050,13 @@ export default function HospitalRegistrationScreen({
                   onPress={handlePrevStep}
                   accessibilityLabel="Back to Step 3: Premises & Admin"
                 >
-                  <Ionicons name="arrow-back" size={18} color="#DC2626" />
+                  <Ionicons name="arrow-back" size={18} color="#0094D4" />
                   <Text style={styles.docBackBtnText}>Back to Step 3: Premises & Admin</Text>
                 </Pressable>
               </View>
 
               <View style={styles.sectionHeader}>
-                <Ionicons name="cloud-upload" size={18} color="#DC2626" />
+                <Ionicons name="cloud-upload" size={18} color="#0094D4" />
                 <Text style={styles.sectionTitle}>4. Regulatory Document Verification</Text>
               </View>
 
@@ -1066,7 +1066,7 @@ export default function HospitalRegistrationScreen({
                 </Text>
                 <View style={styles.docUploadBox}>
                   <View style={styles.docUploadIconCircle}>
-                    <Ionicons name="document-attach" size={22} color="#DC2626" />
+                    <Ionicons name="document-attach" size={22} color="#0094D4" />
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.sm }}>
                     <Text style={styles.docUploadTitle}>CEA Registration PDF</Text>
@@ -1155,7 +1155,7 @@ export default function HospitalRegistrationScreen({
           {currentStep === 5 && (
             <>
               <View style={styles.sectionHeader}>
-                <Ionicons name="card" size={18} color="#DC2626" />
+                <Ionicons name="card" size={18} color="#0094D4" />
                 <Text style={styles.sectionTitle}>5. Revenue Payout & Legal Compliance</Text>
               </View>
 
@@ -1216,8 +1216,8 @@ export default function HospitalRegistrationScreen({
                     style={[
                       styles.checkboxBox,
                       isDeclared && {
-                        backgroundColor: '#DC2626',
-                        borderColor: '#DC2626',
+                        backgroundColor: '#0094D4',
+                        borderColor: '#0094D4',
                       },
                     ]}
                   >
@@ -1241,7 +1241,7 @@ export default function HospitalRegistrationScreen({
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2, backgroundColor: '#DC2626' }]}
+                  style={[styles.primaryStepBtn, { flex: 2, backgroundColor: '#0094D4' }]}
                   onPress={handleRegisterHospital}
                   accessibilityLabel="Complete Hospital Registration"
                 >
@@ -1297,7 +1297,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radius.full,
-    backgroundColor: '#DC2626',
+    backgroundColor: '#0094D4',
   },
   stepBadgeText: {
     fontSize: 11,
@@ -1358,8 +1358,8 @@ const styles = StyleSheet.create({
     borderColor: '#16A34A',
   },
   stepCircleCurrent: {
-    backgroundColor: '#DC2626',
-    borderColor: '#FECACA',
+    backgroundColor: '#0094D4',
+    borderColor: '#BAE6F9',
   },
   stepCirclePending: {
     backgroundColor: '#F8FAFC',
@@ -1386,7 +1386,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   stepLabelCurrent: {
-    color: '#DC2626',
+    color: '#0094D4',
     fontWeight: '800',
   },
   stepLabelPending: {
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
   },
   themeBannerCard: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#FECACA',
+    borderColor: '#BAE6F9',
     borderWidth: 1,
     borderRadius: radius.lg,
   },
@@ -1412,7 +1412,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#E6F6FC',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1422,7 +1422,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   clinicalTag: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#0094D4',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radius.full,
@@ -1494,8 +1494,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   typeChipActive: {
-    backgroundColor: '#DC2626',
-    borderColor: '#DC2626',
+    backgroundColor: '#0094D4',
+    borderColor: '#0094D4',
   },
   typeChipText: {
     fontSize: 12,
@@ -1547,8 +1547,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   deptChipSelected: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#DC2626',
+    backgroundColor: '#E6F6FC',
+    borderColor: '#0094D4',
   },
   deptChipText: {
     fontSize: 11,
@@ -1556,7 +1556,7 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   deptChipTextSelected: {
-    color: '#DC2626',
+    color: '#0094D4',
     fontWeight: '700',
   },
   infoBanner: {
@@ -1590,8 +1590,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   phoneOptionChipSelected: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#DC2626',
+    backgroundColor: '#E6F6FC',
+    borderColor: '#0094D4',
   },
   phoneOptionLabel: {
     fontSize: 12,
@@ -1599,7 +1599,7 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
   phoneOptionLabelSelected: {
-    color: '#DC2626',
+    color: '#0094D4',
   },
   phoneOptionPrefix: {
     fontSize: 10,
@@ -1624,7 +1624,7 @@ const styles = StyleSheet.create({
   prefixText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#DC2626',
+    color: '#0094D4',
   },
   docBackHeader: {
     marginBottom: spacing.xs,
@@ -1633,8 +1633,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FEE2E2',
-    borderColor: '#DC2626',
+    backgroundColor: '#E6F6FC',
+    borderColor: '#0094D4',
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -1644,7 +1644,7 @@ const styles = StyleSheet.create({
   docBackBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#DC2626',
+    color: '#0094D4',
   },
   uploadSectionTitle: {
     fontSize: 13,
@@ -1665,7 +1665,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#E6F6FC',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1696,7 +1696,7 @@ const styles = StyleSheet.create({
     color: '#15803D',
   },
   uploadBtn: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#0094D4',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: radius.sm,
@@ -1744,7 +1744,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#DC2626',
+    backgroundColor: '#0094D4',
     paddingVertical: 14,
     borderRadius: radius.md,
     marginTop: spacing.xs,
@@ -1773,7 +1773,7 @@ const styles = StyleSheet.create({
   },
   dashboardHeroCard: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#FECACA',
+    borderColor: '#BAE6F9',
     borderWidth: 1.5,
     borderRadius: radius.lg,
   },
@@ -1785,7 +1785,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#DC2626',
+    backgroundColor: '#0094D4',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1796,7 +1796,7 @@ const styles = StyleSheet.create({
   },
   heroHospitalType: {
     fontSize: 12,
-    color: '#DC2626',
+    color: '#0094D4',
     fontWeight: '700',
     marginTop: 2,
   },
@@ -1920,7 +1920,7 @@ const styles = StyleSheet.create({
   actionLinkText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#DC2626',
+    color: '#0094D4',
   },
   summaryCard: {
     backgroundColor: '#FFFFFF',
