@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,6 +18,7 @@ import { colors, radius, spacing } from '../../theme/colors';
 import Card from '../../components/Card';
 import { RootStackParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
+import { pickDocumentOrImage } from '../../utils/filePicker';
 
 const PHARMACY_TYPES = [
   'Retail Medical Chemist',
@@ -106,38 +106,78 @@ export default function PharmacyRegistrationScreen({
   const [upiId, setUpiId] = useState('metromeds@upi');
   const [isDeclared, setIsDeclared] = useState(true);
 
+  // Field inline error validation states
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const handleNextStep = () => {
     if (currentStep === 1) {
+      const newErrors: Record<string, string> = {};
       if (!storeName.trim()) {
-        Alert.alert('Required Field', 'Please enter pharmacy or chemist store name.');
+        newErrors.storeName = 'Please enter pharmacy or chemist store name.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      if (!form20License.trim() || !form21License.trim()) {
-        Alert.alert('License Required', 'Please enter Form 20 and Form 21 Drug Retail License numbers.');
+      const newErrors: Record<string, string> = {};
+      if (!form20License.trim()) {
+        newErrors.form20License = 'Please enter Form 20 Drug Retail License number.';
+      }
+      if (!form21License.trim()) {
+        newErrors.form21License = 'Please enter Form 21 Drug Retail License number.';
+      }
+      if (!pharmacistName.trim()) {
+        newErrors.pharmacistName = 'Please enter registered pharmacist in-charge name.';
+      }
+      if (!pharmacistRegNo.trim()) {
+        newErrors.pharmacistRegNo = 'Please enter State Pharmacy Council registration number.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
-      if (!pharmacistName.trim() || !pharmacistRegNo.trim()) {
-        Alert.alert('Pharmacist Required', 'Please enter registered pharmacist in-charge credentials.');
-        return;
-      }
+      setErrors({});
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      if (!storePhone.trim() || storePhone.trim().length < 10) {
-        Alert.alert('Invalid Phone', 'Please enter a valid 10-digit primary store mobile number.');
+      const newErrors: Record<string, string> = {};
+      const cleanPhone = storePhone.trim().replace(/\D/g, '');
+      if (!storePhone.trim() || cleanPhone.length !== 10) {
+        newErrors.storePhone = 'Please enter a valid 10-digit primary store mobile number.';
+      }
+      if (!storeAddress.trim()) {
+        newErrors.storeAddress = 'Please enter physical store address.';
+      }
+      if (!city.trim()) {
+        newErrors.city = 'Please enter city.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
-      if (!storeAddress.trim() || !city.trim()) {
-        Alert.alert('Address Required', 'Please enter physical store address and city.');
-        return;
-      }
+      setErrors({});
       setCurrentStep(4);
     } else if (currentStep === 4) {
+      const newErrors: Record<string, string> = {};
       if (!uploadedDrugDoc) {
-        Alert.alert('Document Required', 'Please upload Drug License Form 20/21 PDF certificate.');
+        newErrors.uploadedDrugDoc = 'Please upload Drug License Form 20/21 PDF certificate.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       setCurrentStep(5);
     }
   };
@@ -149,13 +189,24 @@ export default function PharmacyRegistrationScreen({
   };
 
   const handleRegisterPharmacy = () => {
+    const newErrors: Record<string, string> = {};
+    if (!bankName.trim()) {
+      newErrors.bankName = 'Please enter payout bank name.';
+    }
+    if (!accountNumber.trim()) {
+      newErrors.accountNumber = 'Please enter bank account number.';
+    }
+    if (!ifscCode.trim()) {
+      newErrors.ifscCode = 'Please enter IFSC code.';
+    }
     if (!isDeclared) {
-      Alert.alert(
-        'Declaration Required',
-        'Please confirm adherence to Drugs & Cosmetics Act and Schedule H/H1 dispensing standards.',
-      );
+      newErrors.isDeclared = 'Please confirm adherence to Drugs & Cosmetics Act and dispensing standards.';
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    setErrors({});
 
     // Save provider into context
     registerProvider({
@@ -183,12 +234,6 @@ export default function PharmacyRegistrationScreen({
     switchProviderMode('pharmacy');
     setIsRegistered(true);
     onComplete?.();
-
-    Alert.alert(
-      'Pharmacy Registration Complete! 💊',
-      `${storeName} is successfully registered on OneBuddy Healthcare Network with verified Form 20/21 Drug Retail approval.`,
-      [{ text: 'View Pharmacy Dashboard' }],
-    );
   };
 
   const ContainerComponent = embedded ? View : SafeAreaView;
@@ -200,25 +245,20 @@ export default function PharmacyRegistrationScreen({
       <ContainerComponent {...(containerProps as any)}>
         {/* Pharmacy Dashboard Header */}
         <View style={styles.topHeader}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => setIsRegistered(false)}
-            accessibilityLabel="Edit Pharmacy Registration"
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="flask" size={18} color="#2DD4BF" />
-              <Text style={styles.headerTitle} numberOfLines={1}>{storeName}</Text>
+          <View style={styles.headerTitleContainer}>
+            <View style={styles.headerTitleRow}>
+              <Ionicons name="flask" size={16} color="#2DD4BF" />
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {storeName}
+              </Text>
             </View>
-            <Text style={styles.headerSubtitle}>
-              Registered Pharmacy Dashboard • Form 20/21: {form20License}
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              Registered Pharmacy • Form 20/21: {form20License}
             </Text>
           </View>
+
           <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={13} color="#FFFFFF" />
+            <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
             <Text style={styles.verifiedBadgeText}>VERIFIED</Text>
           </View>
         </View>
@@ -291,31 +331,46 @@ export default function PharmacyRegistrationScreen({
           </Card>
 
           {/* Operational Metrics */}
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, { marginTop: spacing.md, marginBottom: spacing.xs }]}>
             <Ionicons name="bicycle-outline" size={17} color="#0D9488" />
             <Text style={styles.sectionTitle}>Delivery Operations & Compliance</Text>
           </View>
 
           <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-              <Ionicons name="map" size={20} color="#0D9488" />
-              <Text style={styles.statNumber}>{deliveryRadiusKm} km</Text>
-              <Text style={styles.statLabel}>Delivery Radius</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#F0FDFA' }]}>
+                  <Ionicons name="map" size={19} color="#0D9488" />
+                </View>
+                <Text style={styles.statNumber}>{deliveryRadiusKm} km</Text>
+                <Text style={styles.statLabel}>Delivery Radius</Text>
+              </View>
+
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#E0F2FE' }]}>
+                  <Ionicons name="snow" size={19} color="#0284C7" />
+                </View>
+                <Text style={styles.statNumber}>{hasColdChain ? 'Yes' : 'No'}</Text>
+                <Text style={styles.statLabel}>Cold Chain 2-8°C</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Ionicons name="snow" size={20} color="#0284C7" />
-              <Text style={styles.statNumber}>{hasColdChain ? 'Yes' : 'No'}</Text>
-              <Text style={styles.statLabel}>Cold Chain 2-8°C</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Ionicons name="time" size={20} color="#D97706" />
-              <Text style={styles.statNumber}>{has24x7Service ? '24/7' : 'Standard'}</Text>
-              <Text style={styles.statLabel}>Store Hours</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Ionicons name="document-text" size={20} color="#16A34A" />
-              <Text style={styles.statNumber}>Form 20/21</Text>
-              <Text style={styles.statLabel}>Drug License</Text>
+
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="time" size={19} color="#D97706" />
+                </View>
+                <Text style={styles.statNumber}>{has24x7Service ? '24/7' : 'Standard'}</Text>
+                <Text style={styles.statLabel}>Store Hours</Text>
+              </View>
+
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#DCFCE7' }]}>
+                  <Ionicons name="document-text" size={19} color="#16A34A" />
+                </View>
+                <Text style={styles.statNumber}>Form 20/21</Text>
+                <Text style={styles.statLabel}>Drug License</Text>
+              </View>
             </View>
           </View>
 
@@ -377,25 +432,31 @@ export default function PharmacyRegistrationScreen({
 
           {/* Store & Settlement Summary */}
           <Card style={styles.summaryCard} padding="md">
-            <Text style={styles.summaryCardHeading}>Store Location & Bank Settlement</Text>
+            <View style={styles.summaryHeaderRow}>
+              <View style={[styles.summaryHeaderIconWrap, { backgroundColor: '#F0FDFA' }]}>
+                <Ionicons name="business" size={16} color="#0D9488" />
+              </View>
+              <Text style={styles.summaryCardHeading}>Store Location & Bank Settlement</Text>
+            </View>
+
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Store Address:</Text>
+              <Text style={styles.summaryLabel}>Store Address</Text>
               <Text style={styles.summaryValue}>{storeAddress}, {city}, {stateName} - {pincode}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Store Mobile:</Text>
+              <Text style={styles.summaryLabel}>Store Mobile</Text>
               <Text style={styles.summaryValue}>+91 {storePhone}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>GSTIN / PAN:</Text>
+              <Text style={styles.summaryLabel}>GSTIN / PAN</Text>
               <Text style={styles.summaryValue}>{gstin}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Pharmacist:</Text>
+              <Text style={styles.summaryLabel}>Pharmacist</Text>
               <Text style={styles.summaryValue}>{pharmacistName} ({pharmacistDegree})</Text>
             </View>
             <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.summaryLabel}>Settlement Bank:</Text>
+              <Text style={styles.summaryLabel}>Settlement Bank</Text>
               <Text style={styles.summaryValue}>{bankName} ••••{accountNumber.slice(-4)} ({ifscCode})</Text>
             </View>
           </Card>
@@ -524,12 +585,7 @@ export default function PharmacyRegistrationScreen({
                     <Ionicons name="flask" size={26} color="#0D9488" />
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.md }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.bannerTitle}>Pharmacy Retail Portal</Text>
-                      <View style={styles.pharmacyTag}>
-                        <Text style={styles.pharmacyTagText}>Category 3</Text>
-                      </View>
-                    </View>
+                    <Text style={styles.bannerTitle}>Pharmacy Retail Portal</Text>
                     <Text style={styles.bannerSubtitle}>
                       Register your licensed retail chemist, upload Form 20/21 approvals, and configure home delivery dispatch.
                     </Text>
@@ -545,12 +601,21 @@ export default function PharmacyRegistrationScreen({
               <Card style={styles.formCard} padding="lg">
                 <Text style={styles.inputLabel}>Pharmacy / Retail Chemist Name *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.storeName && styles.inputError]}
                   value={storeName}
-                  onChangeText={setStoreName}
-                  placeholder="e.g. Metro Meds 24x7 Pharmacy"
+                  onChangeText={(val) => {
+                    setStoreName(val);
+                    clearError('storeName');
+                  }}
+                  placeholder="Enter pharmacy name"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.storeName ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.storeName}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={styles.inputLabel}>Pharmacy Classification *</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -577,7 +642,7 @@ export default function PharmacyRegistrationScreen({
                       style={styles.textInput}
                       value={operatingHours}
                       onChangeText={setOperatingHours}
-                      placeholder="08:00 AM - 11:00 PM"
+                      placeholder="Enter operating hours"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -588,7 +653,7 @@ export default function PharmacyRegistrationScreen({
                       value={deliveryRadiusKm}
                       onChangeText={setDeliveryRadiusKm}
                       keyboardType="number-pad"
-                      placeholder="8 km"
+                      placeholder="Enter delivery radius in km"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -644,9 +709,9 @@ export default function PharmacyRegistrationScreen({
               <Pressable
                 style={styles.primaryStepBtn}
                 onPress={handleNextStep}
-                accessibilityLabel="Continue to Drug Licenses"
+                accessibilityLabel="Next"
               >
-                <Text style={styles.primaryStepBtnText}>Continue to Step 2: Drug Licenses</Text>
+                <Text style={styles.primaryStepBtnText}>Next</Text>
                 <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
               </Pressable>
             </>
@@ -665,23 +730,41 @@ export default function PharmacyRegistrationScreen({
                   Drug License Form 20 (General Retail) No. *
                 </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.form20License && styles.inputError]}
                   value={form20License}
-                  onChangeText={setForm20License}
-                  placeholder="KA-BGL-DRUG-20-49182"
+                  onChangeText={(val) => {
+                    setForm20License(val);
+                    clearError('form20License');
+                  }}
+                  placeholder="Enter Form 20 license number"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.form20License ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.form20License}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={styles.inputLabel}>
                   Drug License Form 21 (Biologicals & Specified) No. *
                 </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.form21License && styles.inputError]}
                   value={form21License}
-                  onChangeText={setForm21License}
-                  placeholder="KA-BGL-DRUG-21-49183"
+                  onChangeText={(val) => {
+                    setForm21License(val);
+                    clearError('form21License');
+                  }}
+                  placeholder="Enter Form 21 license number"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.form21License ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.form21License}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -690,7 +773,7 @@ export default function PharmacyRegistrationScreen({
                       style={styles.textInput}
                       value={licenseExpiry}
                       onChangeText={setLicenseExpiry}
-                      placeholder="2028-12-31"
+                      placeholder="Enter license expiry date"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -701,7 +784,7 @@ export default function PharmacyRegistrationScreen({
                       value={gstin}
                       onChangeText={setGstin}
                       autoCapitalize="characters"
-                      placeholder="29ABCDE1234F1Z5"
+                      placeholder="Enter GSTIN number"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -712,12 +795,21 @@ export default function PharmacyRegistrationScreen({
                   Registered Pharmacist In-Charge Name *
                 </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.pharmacistName && styles.inputError]}
                   value={pharmacistName}
-                  onChangeText={setPharmacistName}
-                  placeholder="Pooja Kulkarni"
+                  onChangeText={(val) => {
+                    setPharmacistName(val);
+                    clearError('pharmacistName');
+                  }}
+                  placeholder="Enter pharmacist name"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.pharmacistName ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.pharmacistName}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={styles.inputLabel}>Pharmacist Qualification Degree *</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -739,12 +831,21 @@ export default function PharmacyRegistrationScreen({
 
                 <Text style={styles.inputLabel}>State Pharmacy Council Registration No. *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.pharmacistRegNo && styles.inputError]}
                   value={pharmacistRegNo}
-                  onChangeText={setPharmacistRegNo}
-                  placeholder="KSPC-2021-58291"
+                  onChangeText={(val) => {
+                    setPharmacistRegNo(val);
+                    clearError('pharmacistRegNo');
+                  }}
+                  placeholder="Enter council registration number"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.pharmacistRegNo ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.pharmacistRegNo}</Text>
+                  </View>
+                ) : null}
               </Card>
 
               {/* Step 2 Actions */}
@@ -759,11 +860,11 @@ export default function PharmacyRegistrationScreen({
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Continue to Step 3 Premises"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 3: Premises & Contact</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -783,13 +884,24 @@ export default function PharmacyRegistrationScreen({
                   <View style={{ flex: 1, marginRight: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Store Contact Mobile *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.storePhone && styles.inputError]}
                       value={storePhone}
-                      onChangeText={setStorePhone}
+                      onChangeText={(val) => {
+                        const digits = val.replace(/\D/g, '').slice(0, 10);
+                        setStorePhone(digits);
+                        clearError('storePhone');
+                      }}
                       keyboardType="phone-pad"
-                      placeholder="10-digit mobile"
+                      maxLength={10}
+                      placeholder="Enter 10-digit mobile number"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.storePhone ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.storePhone}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Official Store Email *</Text>
@@ -799,7 +911,7 @@ export default function PharmacyRegistrationScreen({
                       onChangeText={setStoreEmail}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                      placeholder="care@pharmacy.com"
+                      placeholder="Enter official store email"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -807,23 +919,41 @@ export default function PharmacyRegistrationScreen({
 
                 <Text style={styles.inputLabel}>Physical Store Address *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.storeAddress && styles.inputError]}
                   value={storeAddress}
-                  onChangeText={setStoreAddress}
-                  placeholder="Shop No, Building, Road & Cross"
+                  onChangeText={(val) => {
+                    setStoreAddress(val);
+                    clearError('storeAddress');
+                  }}
+                  placeholder="Enter physical store address"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.storeAddress ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.storeAddress}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1, marginRight: spacing.xs }}>
-                    <Text style={styles.inputLabel} numberOfLines={1}>City</Text>
+                    <Text style={styles.inputLabel} numberOfLines={1}>City *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.city && styles.inputError]}
                       value={city}
-                      onChangeText={setCity}
-                      placeholder="Bengaluru"
+                      onChangeText={(val) => {
+                        setCity(val);
+                        clearError('city');
+                      }}
+                      placeholder="Enter city"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.city ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.city}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1, marginHorizontal: spacing.xs }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>State</Text>
@@ -831,7 +961,7 @@ export default function PharmacyRegistrationScreen({
                       style={styles.textInput}
                       value={stateName}
                       onChangeText={setStateName}
-                      placeholder="Karnataka"
+                      placeholder="Enter state"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -843,7 +973,7 @@ export default function PharmacyRegistrationScreen({
                       onChangeText={setPincode}
                       keyboardType="number-pad"
                       maxLength={6}
-                      placeholder="560034"
+                      placeholder="Enter 6-digit PIN code"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -862,11 +992,11 @@ export default function PharmacyRegistrationScreen({
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Continue to Step 4 Document Upload"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 4: Upload Documents</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -897,7 +1027,7 @@ export default function PharmacyRegistrationScreen({
                 <Text style={styles.uploadSectionTitle}>
                   Form 20 & 21 Drug Retail License Certificate *
                 </Text>
-                <View style={styles.docUploadBox}>
+                <View style={[styles.docUploadBox, errors.uploadedDrugDoc && styles.inputError]}>
                   <View style={styles.docUploadIconCircle}>
                     <Ionicons name="document-attach" size={22} color="#0D9488" />
                   </View>
@@ -911,20 +1041,23 @@ export default function PharmacyRegistrationScreen({
                   </View>
                   <Pressable
                     style={styles.uploadBtn}
-                    onPress={() => {
-                      Alert.alert('Upload Document', 'Select replacement Form 20/21 license file.', [
-                        {
-                          text: 'Replace PDF',
-                          onPress: () =>
-                            setUploadedDrugDoc(`Drug_License_${Date.now().toString().slice(-4)}.pdf`),
-                        },
-                        { text: 'Cancel', style: 'cancel' },
-                      ]);
+                    onPress={async () => {
+                      const file = await pickDocumentOrImage();
+                      if (file) {
+                        setUploadedDrugDoc(file.name);
+                        clearError('uploadedDrugDoc');
+                      }
                     }}
                   >
                     <Text style={styles.uploadBtnText}>Replace</Text>
                   </Pressable>
                 </View>
+                {errors.uploadedDrugDoc ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.uploadedDrugDoc}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={[styles.uploadSectionTitle, { marginTop: spacing.md }]}>
                   Registered Pharmacist Certificate
@@ -945,15 +1078,11 @@ export default function PharmacyRegistrationScreen({
                   </View>
                   <Pressable
                     style={styles.uploadBtn}
-                    onPress={() => {
-                      Alert.alert('Upload Document', 'Select replacement Pharmacist certificate file.', [
-                        {
-                          text: 'Replace PDF',
-                          onPress: () =>
-                            setUploadedPharmDoc(`Pharmacist_Reg_${Date.now().toString().slice(-4)}.pdf`),
-                        },
-                        { text: 'Cancel', style: 'cancel' },
-                      ]);
+                    onPress={async () => {
+                      const file = await pickDocumentOrImage();
+                      if (file) {
+                        setUploadedPharmDoc(file.name);
+                      }
                     }}
                   >
                     <Text style={styles.uploadBtnText}>Replace</Text>
@@ -969,15 +1098,15 @@ export default function PharmacyRegistrationScreen({
                   accessibilityLabel="Back to Step 3"
                 >
                   <Ionicons name="arrow-back" size={16} color={colors.text} />
-                  <Text style={styles.secondaryStepBtnText}>Back to Step 3</Text>
+                  <Text style={styles.secondaryStepBtnText}>Back</Text>
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Continue to Step 5 Bank & Declaration"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 5: Bank & Legal</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -995,35 +1124,62 @@ export default function PharmacyRegistrationScreen({
               <Card style={styles.formCard} padding="lg">
                 <Text style={styles.inputLabel}>Payout Bank Name *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.bankName && styles.inputError]}
                   value={bankName}
-                  onChangeText={setBankName}
-                  placeholder="e.g. HDFC Bank, ICICI Bank, SBI"
+                  onChangeText={(val) => {
+                    setBankName(val);
+                    clearError('bankName');
+                  }}
+                  placeholder="Enter bank name"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.bankName ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.bankName}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1.4, marginRight: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Account Number *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.accountNumber && styles.inputError]}
                       value={accountNumber}
-                      onChangeText={setAccountNumber}
+                      onChangeText={(val) => {
+                        setAccountNumber(val);
+                        clearError('accountNumber');
+                      }}
                       keyboardType="number-pad"
-                      placeholder="Account number"
+                      placeholder="Enter account number"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.accountNumber ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.accountNumber}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>IFSC Code *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.ifscCode && styles.inputError]}
                       value={ifscCode}
-                      onChangeText={setIfscCode}
+                      onChangeText={(val) => {
+                        setIfscCode(val);
+                        clearError('ifscCode');
+                      }}
                       autoCapitalize="characters"
-                      placeholder="HDFC0001234"
+                      placeholder="Enter IFSC code"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.ifscCode ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.ifscCode}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
 
@@ -1033,16 +1189,19 @@ export default function PharmacyRegistrationScreen({
                   value={upiId}
                   onChangeText={setUpiId}
                   autoCapitalize="none"
-                  placeholder="metromeds@upi"
+                  placeholder="Enter pharmacy UPI ID"
                   placeholderTextColor={colors.textMuted}
                 />
               </Card>
 
               {/* Compliance Declaration */}
-              <Card style={styles.declarationCard} padding="md">
+              <Card style={[styles.declarationCard, errors.isDeclared && styles.inputError]} padding="md">
                 <Pressable
                   style={styles.checkboxRow}
-                  onPress={() => setIsDeclared(!isDeclared)}
+                  onPress={() => {
+                    setIsDeclared(!isDeclared);
+                    clearError('isDeclared');
+                  }}
                   accessibilityLabel="Agree to Drugs & Cosmetics Act"
                 >
                   <View
@@ -1061,6 +1220,12 @@ export default function PharmacyRegistrationScreen({
                   </Text>
                 </Pressable>
               </Card>
+              {errors.isDeclared ? (
+                <View style={[styles.errorRow, { marginTop: spacing.xs, marginBottom: spacing.sm }]}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.isDeclared}</Text>
+                </View>
+              ) : null}
 
               {/* Final Step Actions */}
               <View style={styles.stepBtnRow}>
@@ -1070,16 +1235,16 @@ export default function PharmacyRegistrationScreen({
                   accessibilityLabel="Back to Step 4 Documents"
                 >
                   <Ionicons name="arrow-back" size={16} color={colors.text} />
-                  <Text style={styles.secondaryStepBtnText}>Back to Step 4</Text>
+                  <Text style={styles.secondaryStepBtnText}>Back</Text>
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2, backgroundColor: '#0D9488' }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0, backgroundColor: '#0D9488' }]}
                   onPress={handleRegisterPharmacy}
                   accessibilityLabel="Complete Pharmacy Registration"
                 >
                   <Ionicons name="flask" size={18} color="#FFFFFF" />
-                  <Text style={styles.primaryStepBtnText}>Complete & Open Dashboard</Text>
+                  <Text style={styles.primaryStepBtnText} numberOfLines={1}>Complete</Text>
                 </Pressable>
               </View>
             </>
@@ -1098,12 +1263,13 @@ const styles = StyleSheet.create({
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
     minHeight: 56,
     backgroundColor: '#0F172A',
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
+    gap: 8,
   },
   backBtn: {
     width: 36,
@@ -1114,10 +1280,20 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginRight: 6,
+    justifyContent: 'center',
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   headerTitle: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -1145,11 +1321,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radius.full,
+    flexShrink: 0,
+    alignSelf: 'center',
   },
   verifiedBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   progressTrackerContainer: {
     backgroundColor: '#FFFFFF',
@@ -1259,6 +1438,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radius.full,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    marginBottom: 4,
   },
   pharmacyTagText: {
     fontSize: 10,
@@ -1309,6 +1491,22 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 13,
     color: '#0F172A',
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '600',
   },
   inputRow: {
     flexDirection: 'row',
@@ -1491,6 +1689,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   secondaryStepBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1499,11 +1698,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CBD5E1',
     paddingVertical: 14,
-    paddingHorizontal: 16,
     borderRadius: radius.md,
   },
   secondaryStepBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: '#334155',
   },
@@ -1581,33 +1779,50 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   statsGrid: {
+    gap: 10,
+  },
+  statsRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'stretch',
+    gap: 10,
   },
   statBox: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: radius.md,
-    paddingVertical: 12,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
+    minHeight: 105,
+  },
+  statIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
   statNumber: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0F172A',
-    marginTop: 4,
+    textAlign: 'center',
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '600',
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 3,
+    textAlign: 'center',
   },
   actionGrid: {
     flexDirection: 'row',
@@ -1662,31 +1877,50 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderWidth: 1,
     borderRadius: radius.lg,
+    marginTop: spacing.md,
+  },
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.xs,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  summaryHeaderIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   summaryCardHeading: {
     fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: spacing.xs,
   },
   summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
+    alignItems: 'flex-start',
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 8,
+    borderBottomColor: '#F1F5F9',
+    gap: 12,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '600',
     color: '#64748B',
-    minWidth: 100,
+    width: 110,
+    lineHeight: 18,
   },
   summaryValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#0F172A',
     flex: 1,
-    textAlign: 'right',
+    textAlign: 'left',
+    lineHeight: 18,
   },
 });

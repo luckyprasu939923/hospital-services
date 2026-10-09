@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,6 +18,7 @@ import { colors, radius, spacing } from '../../theme/colors';
 import Card from '../../components/Card';
 import { RootStackParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
+import { pickDocumentOrImage } from '../../utils/filePicker';
 
 const HOSPITAL_TYPES = [
   'Super-Specialty Hospital',
@@ -49,12 +49,12 @@ const DEPARTMENTS = [
   'General & Laparoscopic Surgery',
 ];
 
-// Phone line options for manual selection (no default preselection)
+// Phone line options for manual selection with strictly required digit counts
 const PHONE_LINE_OPTIONS = [
-  { id: 'mobile', label: 'Direct Mobile', prefix: '+91', placeholder: '10-digit mobile number' },
-  { id: 'landline', label: 'Hospital Landline (STD)', prefix: '080', placeholder: 'STD code & phone number' },
-  { id: 'tollfree', label: 'Toll-Free Helpline', prefix: '1800', placeholder: 'Toll-free 1800 number' },
-  { id: 'casualty', label: 'Emergency Casualty Desk', prefix: '+91', placeholder: '24x7 desk number' },
+  { id: 'mobile', label: 'Direct Mobile', prefix: '+91', placeholder: 'Enter 10-digit mobile number', minDigits: 10, maxDigits: 10 },
+  { id: 'landline', label: 'Hospital Landline (STD)', prefix: '080', placeholder: 'Enter 8-digit landline number', minDigits: 8, maxDigits: 8 },
+  { id: 'tollfree', label: 'Toll-Free Helpline', prefix: '1800', placeholder: 'Enter 6 or 7-digit toll-free number', minDigits: 6, maxDigits: 7 },
+  { id: 'casualty', label: 'Emergency Casualty Desk', prefix: '+91', placeholder: 'Enter 10-digit casualty number', minDigits: 10, maxDigits: 10 },
 ];
 
 const STEPS = [
@@ -141,15 +141,28 @@ export default function HospitalRegistrationScreen({
   const [ifscCode, setIfscCode] = useState('HDFC0001234');
   const [upiId, setUpiId] = useState('metroapex@upi');
   const [isDeclared, setIsDeclared] = useState(true);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
 
   const toggleDept = (dept: string) => {
     if (selectedDepts.includes(dept)) {
       if (selectedDepts.length === 1) {
-        Alert.alert('Required', 'Please keep at least one active clinical department selected.');
+        setErrors((prev) => ({ ...prev, selectedDepts: 'Please keep at least one active clinical department selected.' }));
         return;
       }
+      clearError('selectedDepts');
       setSelectedDepts(selectedDepts.filter((d) => d !== dept));
     } else {
+      clearError('selectedDepts');
       setSelectedDepts([...selectedDepts, dept]);
     }
   };
@@ -157,55 +170,102 @@ export default function HospitalRegistrationScreen({
   // Step Validation & Forward Navigation
   const handleNextStep = () => {
     if (currentStep === 1) {
+      const newErrors: Record<string, string> = {};
       if (!hospitalName.trim()) {
-        Alert.alert('Required Field', 'Please enter official hospital or healthcare center name.');
-        return;
+        newErrors.hospitalName = 'Please enter official hospital or healthcare center name.';
       }
       if (!totalBeds.trim()) {
-        Alert.alert('Required Field', 'Please specify total bed capacity.');
+        newErrors.totalBeds = 'Please specify total bed capacity.';
+      }
+      if (selectedDepts.length === 0) {
+        newErrors.selectedDepts = 'Please keep at least one active clinical department selected.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       setCurrentStep(2);
     } else if (currentStep === 2) {
+      const newErrors: Record<string, string> = {};
       if (!ceaLicenseNumber.trim()) {
-        Alert.alert('License Required', 'Please enter Clinical Establishment Act registration number.');
+        newErrors.ceaLicenseNumber = 'Please enter Clinical Establishment Act registration number.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       setCurrentStep(3);
     } else if (currentStep === 3) {
+      const newErrors: Record<string, string> = {};
+      const cleanPhone = adminPhone.trim().replace(/\D/g, '');
+      const activeOpt = PHONE_LINE_OPTIONS.find((o) => o.id === selectedPhoneOption);
+      const minDigits = activeOpt?.minDigits || 10;
+      const maxDigits = activeOpt?.maxDigits || 10;
       if (!selectedPhoneOption) {
-        Alert.alert('Phone Selection Required', 'Please choose a phone line option manually (Direct Mobile, Landline, or Toll-Free).');
+        newErrors.selectedPhoneOption = 'Please choose a phone line option manually.';
+      } else if (!adminPhone.trim()) {
+        newErrors.adminPhone = 'Please enter administrative contact number.';
+      } else if (cleanPhone.length < minDigits || cleanPhone.length > maxDigits) {
+        if (minDigits === maxDigits) {
+          newErrors.adminPhone = `Please enter exactly ${minDigits} digits for ${activeOpt?.label}.`;
+        } else {
+          newErrors.adminPhone = `Please enter ${minDigits} to ${maxDigits} digits for ${activeOpt?.label}.`;
+        }
+      }
+      if (!campusAddress.trim()) {
+        newErrors.campusAddress = 'Please enter hospital campus address.';
+      }
+      if (!city.trim()) {
+        newErrors.city = 'Please enter city.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
-      if (!adminPhone.trim() || adminPhone.trim().length < 8) {
-        Alert.alert('Invalid Phone', 'Please enter a valid administrative contact number.');
-        return;
-      }
-      if (!campusAddress.trim() || !city.trim()) {
-        Alert.alert('Address Required', 'Please enter hospital campus address and city.');
-        return;
-      }
+      setErrors({});
       setCurrentStep(4);
     } else if (currentStep === 4) {
+      const newErrors: Record<string, string> = {};
       if (!uploadedCeaDoc) {
-        Alert.alert('Document Required', 'Please upload or attach your CEA Registration Certificate.');
+        newErrors.uploadedCeaDoc = 'Please upload or attach your CEA Registration Certificate.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       setCurrentStep(5);
     }
   };
 
   const handlePrevStep = () => {
+    setErrors({});
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
   const handleRegisterHospital = () => {
+    const newErrors: Record<string, string> = {};
+    if (!bankName.trim()) {
+      newErrors.bankName = 'Please enter designated bank name.';
+    }
+    if (!accountNumber.trim()) {
+      newErrors.accountNumber = 'Please enter bank account number.';
+    }
+    if (!ifscCode.trim()) {
+      newErrors.ifscCode = 'Please enter bank IFSC code.';
+    }
     if (!isDeclared) {
-      Alert.alert('Declaration Required', 'Please verify compliance with the Clinical Establishments Act.');
+      newErrors.declaration = 'Please verify compliance with the Clinical Establishments Act.';
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    setErrors({});
 
     const phonePrefix = selectedPhoneOption
       ? PHONE_LINE_OPTIONS.find((o) => o.id === selectedPhoneOption)?.prefix || '+91'
@@ -238,12 +298,6 @@ export default function HospitalRegistrationScreen({
     // Keep the user within the registered hospital service dashboard without redirecting to Home!
     setIsRegistered(true);
     onComplete?.();
-
-    Alert.alert(
-      'Hospital Registered Successfully! 🏥',
-      `${hospitalName} is verified and active on the OneBuddy Healthcare Network. You are now inside the Hospital Provider Dashboard.`,
-      [{ text: 'View Hospital Dashboard' }],
-    );
   };
 
   const ContainerComponent = embedded ? View : SafeAreaView;
@@ -255,25 +309,20 @@ export default function HospitalRegistrationScreen({
       <ContainerComponent {...(containerProps as any)}>
         {/* Hospital Dashboard Header */}
         <View style={styles.topHeader}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => setIsRegistered(false)}
-            accessibilityLabel="Edit Registration"
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="business" size={18} color="#0094D4" />
-              <Text style={styles.headerTitle} numberOfLines={1}>{hospitalName}</Text>
+          <View style={styles.headerTitleContainer}>
+            <View style={styles.headerTitleRow}>
+              <Ionicons name="business" size={16} color="#0094D4" />
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {hospitalName}
+              </Text>
             </View>
-            <Text style={styles.headerSubtitle}>
-              Registered Hospital Dashboard • CEA: {ceaLicenseNumber}
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              Registered Hospital • CEA: {ceaLicenseNumber}
             </Text>
           </View>
+
           <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={13} color="#FFFFFF" />
+            <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
             <Text style={styles.verifiedBadgeText}>VERIFIED</Text>
           </View>
         </View>
@@ -341,31 +390,46 @@ export default function HospitalRegistrationScreen({
           </Card>
 
           {/* Infrastructure Metrics Overview */}
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, { marginTop: spacing.md, marginBottom: spacing.xs }]}>
             <Ionicons name="stats-chart" size={17} color="#0094D4" />
             <Text style={styles.sectionTitle}>Hospital Infrastructure & Bed Capacity</Text>
           </View>
 
           <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-              <Ionicons name="bed" size={20} color="#0094D4" />
-              <Text style={styles.statNumber}>{totalBeds}</Text>
-              <Text style={styles.statLabel}>Total Beds</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#E6F6FC' }]}>
+                  <Ionicons name="bed" size={19} color="#0094D4" />
+                </View>
+                <Text style={styles.statNumber}>{totalBeds}</Text>
+                <Text style={styles.statLabel}>Total Beds</Text>
+              </View>
+
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#E0F2FE' }]}>
+                  <Ionicons name="pulse" size={19} color="#0284C7" />
+                </View>
+                <Text style={styles.statNumber}>{icuBeds}</Text>
+                <Text style={styles.statLabel}>ICU Beds</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Ionicons name="pulse" size={20} color="#0284C7" />
-              <Text style={styles.statNumber}>{icuBeds}</Text>
-              <Text style={styles.statLabel}>ICU Beds</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Ionicons name="medkit" size={20} color="#16A34A" />
-              <Text style={styles.statNumber}>{operationTheatres}</Text>
-              <Text style={styles.statLabel}>Surgical OTs</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Ionicons name="flash" size={20} color="#0094D4" />
-              <Text style={styles.statNumber}>{hasEmergency24x7 ? '24/7' : 'Day'}</Text>
-              <Text style={styles.statLabel}>Casualty Desk</Text>
+
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#DCFCE7' }]}>
+                  <Ionicons name="medkit" size={19} color="#16A34A" />
+                </View>
+                <Text style={styles.statNumber}>{operationTheatres}</Text>
+                <Text style={styles.statLabel}>Surgical OTs</Text>
+              </View>
+
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#F0FDFA' }]}>
+                  <Ionicons name="flash" size={19} color="#0D9488" />
+                </View>
+                <Text style={styles.statNumber}>{hasEmergency24x7 ? '24/7' : 'Day'}</Text>
+                <Text style={styles.statLabel}>Casualty Desk</Text>
+              </View>
             </View>
           </View>
 
@@ -443,13 +507,19 @@ export default function HospitalRegistrationScreen({
 
           {/* Hospital Administration Info */}
           <Card style={styles.summaryCard} padding="md">
-            <Text style={styles.summaryCardHeading}>Administration & Registered Premises</Text>
+            <View style={styles.summaryHeaderRow}>
+              <View style={[styles.summaryHeaderIconWrap, { backgroundColor: '#E6F6FC' }]}>
+                <Ionicons name="business" size={16} color="#0094D4" />
+              </View>
+              <Text style={styles.summaryCardHeading}>Administration & Registered Premises</Text>
+            </View>
+
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Superintendent:</Text>
+              <Text style={styles.summaryLabel}>Superintendent</Text>
               <Text style={styles.summaryValue}>{superintendentName} ({superintendentRegNo})</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Admin Contact:</Text>
+              <Text style={styles.summaryLabel}>Admin Contact</Text>
               <Text style={styles.summaryValue}>
                 {selectedPhoneOption
                   ? `${PHONE_LINE_OPTIONS.find((o) => o.id === selectedPhoneOption)?.prefix} ${adminPhone}`
@@ -457,15 +527,15 @@ export default function HospitalRegistrationScreen({
               </Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Emergency Desk:</Text>
+              <Text style={styles.summaryLabel}>Emergency Desk</Text>
               <Text style={styles.summaryValue}>{emergencyHotline}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Campus Address:</Text>
+              <Text style={styles.summaryLabel}>Campus Address</Text>
               <Text style={styles.summaryValue}>{campusAddress}, {city}, {stateName} - {pincode}</Text>
             </View>
             <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.summaryLabel}>Settlement Bank:</Text>
+              <Text style={styles.summaryLabel}>Settlement Bank</Text>
               <Text style={styles.summaryValue}>{bankName} ••••{accountNumber.slice(-4)} ({ifscCode})</Text>
             </View>
           </Card>
@@ -594,12 +664,7 @@ export default function HospitalRegistrationScreen({
                     <Ionicons name="business" size={26} color="#0094D4" />
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.md }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.themeBannerTitle}>Hospital Provider Portal</Text>
-                      <View style={styles.clinicalTag}>
-                        <Text style={styles.clinicalTagText}>Category 1</Text>
-                      </View>
-                    </View>
+                    <Text style={styles.themeBannerTitle}>Hospital Provider Portal</Text>
                     <Text style={styles.themeBannerSubtitle}>
                       Register inpatient facilities, emergency triage, ICU infrastructure & clinical departments.
                     </Text>
@@ -615,12 +680,21 @@ export default function HospitalRegistrationScreen({
               <Card style={styles.formCard} padding="lg">
                 <Text style={styles.inputLabel}>Official Hospital / Healthcare Center Name *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.hospitalName && styles.inputError]}
                   value={hospitalName}
-                  onChangeText={setHospitalName}
-                  placeholder="e.g. Metro Apex Multi-Specialty Hospital"
+                  onChangeText={(val) => {
+                    setHospitalName(val);
+                    clearError('hospitalName');
+                  }}
+                  placeholder="Enter official hospital name"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.hospitalName ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.hospitalName}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={styles.inputLabel}>Hospital Classification *</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -645,13 +719,22 @@ export default function HospitalRegistrationScreen({
                   <View style={{ flex: 1, marginRight: spacing.xs }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Total Beds *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.totalBeds && styles.inputError]}
                       value={totalBeds}
-                      onChangeText={setTotalBeds}
+                      onChangeText={(val) => {
+                        setTotalBeds(val);
+                        clearError('totalBeds');
+                      }}
                       keyboardType="number-pad"
-                      placeholder="180"
+                      placeholder="Enter total beds"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.totalBeds ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.totalBeds}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1, marginHorizontal: spacing.xs }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>ICU Beds</Text>
@@ -660,7 +743,7 @@ export default function HospitalRegistrationScreen({
                       value={icuBeds}
                       onChangeText={setIcuBeds}
                       keyboardType="number-pad"
-                      placeholder="24"
+                      placeholder="Enter ICU beds"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -671,7 +754,7 @@ export default function HospitalRegistrationScreen({
                       value={operationTheatres}
                       onChangeText={setOperationTheatres}
                       keyboardType="number-pad"
-                      placeholder="6"
+                      placeholder="Enter operation theatres"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -766,9 +849,9 @@ export default function HospitalRegistrationScreen({
               <Pressable
                 style={styles.primaryStepBtn}
                 onPress={handleNextStep}
-                accessibilityLabel="Proceed to Accreditations"
+                accessibilityLabel="Next"
               >
-                <Text style={styles.primaryStepBtnText}>Continue to Step 2: Accreditations</Text>
+                <Text style={styles.primaryStepBtnText}>Next</Text>
                 <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
               </Pressable>
             </>
@@ -787,12 +870,21 @@ export default function HospitalRegistrationScreen({
                   Clinical Establishments Act (CEA) Registration No. *
                 </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.ceaLicenseNumber && styles.inputError]}
                   value={ceaLicenseNumber}
-                  onChangeText={setCeaLicenseNumber}
-                  placeholder="e.g. CEA-KA-2024-88412"
+                  onChangeText={(val) => {
+                    setCeaLicenseNumber(val);
+                    clearError('ceaLicenseNumber');
+                  }}
+                  placeholder="Enter CEA registration number"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.ceaLicenseNumber ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.ceaLicenseNumber}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={styles.inputLabel}>Quality Accreditation Level *</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -817,7 +909,7 @@ export default function HospitalRegistrationScreen({
                   style={styles.textInput}
                   value={bmwAuthNumber}
                   onChangeText={setBmwAuthNumber}
-                  placeholder="e.g. KSPCB-BMW-2025-4190"
+                  placeholder="Enter BMW authorization number"
                   placeholderTextColor={colors.textMuted}
                 />
 
@@ -841,11 +933,11 @@ export default function HospitalRegistrationScreen({
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Proceed to Premises & Admin"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 3: Premises & Admin</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -866,7 +958,7 @@ export default function HospitalRegistrationScreen({
                   style={styles.textInput}
                   value={superintendentName}
                   onChangeText={setSuperintendentName}
-                  placeholder="Dr. Arvind K. Rao, MD, FRCS"
+                  placeholder="Enter medical superintendent name"
                   placeholderTextColor={colors.textMuted}
                 />
 
@@ -875,7 +967,7 @@ export default function HospitalRegistrationScreen({
                   style={styles.textInput}
                   value={superintendentRegNo}
                   onChangeText={setSuperintendentRegNo}
-                  placeholder="KMC-1998-38291"
+                  placeholder="Enter council registration number"
                   placeholderTextColor={colors.textMuted}
                 />
 
@@ -893,7 +985,12 @@ export default function HospitalRegistrationScreen({
                           styles.phoneOptionChip,
                           isSelected && styles.phoneOptionChipSelected,
                         ]}
-                        onPress={() => setSelectedPhoneOption(opt.id)}
+                        onPress={() => {
+                          setSelectedPhoneOption(opt.id);
+                          setAdminPhone((prev) => prev.slice(0, opt.maxDigits));
+                          clearError('selectedPhoneOption');
+                          clearError('adminPhone');
+                        }}
                         accessibilityLabel={`Select ${opt.label}`}
                       >
                         <Ionicons
@@ -916,6 +1013,12 @@ export default function HospitalRegistrationScreen({
                     );
                   })}
                 </View>
+                {errors.selectedPhoneOption ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.selectedPhoneOption}</Text>
+                  </View>
+                ) : null}
 
                 {/* Phone input with active selected prefix */}
                 <Text style={styles.inputLabel}>
@@ -923,28 +1026,43 @@ export default function HospitalRegistrationScreen({
                     ? `Enter ${PHONE_LINE_OPTIONS.find((o) => o.id === selectedPhoneOption)?.label} *`
                     : 'Select Phone Option Above First *'}
                 </Text>
-                <View style={styles.phoneInputWrap}>
-                  <View style={styles.prefixBox}>
-                    <Text style={styles.prefixText}>
-                      {selectedPhoneOption
-                        ? PHONE_LINE_OPTIONS.find((o) => o.id === selectedPhoneOption)?.prefix
-                        : '--'}
-                    </Text>
+                {(() => {
+                  const activePhoneOption = PHONE_LINE_OPTIONS.find((o) => o.id === selectedPhoneOption);
+                  const phoneMaxDigits = activePhoneOption?.maxDigits || 10;
+                  return (
+                    <View style={styles.phoneInputWrap}>
+                      <View style={styles.prefixBox}>
+                        <Text style={styles.prefixText}>
+                          {activePhoneOption ? activePhoneOption.prefix : '--'}
+                        </Text>
+                      </View>
+                      <TextInput
+                        style={[styles.textInput, { flex: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }, errors.adminPhone && styles.inputError]}
+                        value={adminPhone}
+                        onChangeText={(val) => {
+                          const digits = val.replace(/\D/g, '').slice(0, phoneMaxDigits);
+                          setAdminPhone(digits);
+                          clearError('adminPhone');
+                        }}
+                        keyboardType="phone-pad"
+                        maxLength={phoneMaxDigits}
+                        placeholder={
+                          selectedPhoneOption
+                            ? activePhoneOption?.placeholder
+                            : 'Tap a phone option above first'
+                        }
+                        placeholderTextColor={colors.textMuted}
+                        editable={Boolean(selectedPhoneOption)}
+                      />
+                    </View>
+                  );
+                })()}
+                {errors.adminPhone ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.adminPhone}</Text>
                   </View>
-                  <TextInput
-                    style={[styles.textInput, { flex: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
-                    value={adminPhone}
-                    onChangeText={setAdminPhone}
-                    keyboardType="phone-pad"
-                    placeholder={
-                      selectedPhoneOption
-                        ? PHONE_LINE_OPTIONS.find((o) => o.id === selectedPhoneOption)?.placeholder
-                        : 'Tap a phone option above first'
-                    }
-                    placeholderTextColor={colors.textMuted}
-                    editable={Boolean(selectedPhoneOption)}
-                  />
-                </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -952,9 +1070,10 @@ export default function HospitalRegistrationScreen({
                     <TextInput
                       style={styles.textInput}
                       value={emergencyHotline}
-                      onChangeText={setEmergencyHotline}
+                      onChangeText={(val) => setEmergencyHotline(val.replace(/\D/g, '').slice(0, 10))}
                       keyboardType="phone-pad"
-                      placeholder="080-23456789"
+                      maxLength={10}
+                      placeholder="Enter 10-digit emergency hotline"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -966,7 +1085,7 @@ export default function HospitalRegistrationScreen({
                       onChangeText={setHospitalEmail}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                      placeholder="admin@hospital.com"
+                      placeholder="Enter official email address"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -974,23 +1093,41 @@ export default function HospitalRegistrationScreen({
 
                 <Text style={styles.inputLabel}>Campus Address / Street *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.campusAddress && styles.inputError]}
                   value={campusAddress}
-                  onChangeText={setCampusAddress}
-                  placeholder="Campus 1, Health City Ring Road"
+                  onChangeText={(val) => {
+                    setCampusAddress(val);
+                    clearError('campusAddress');
+                  }}
+                  placeholder="Enter campus address and street"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.campusAddress ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.campusAddress}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1, marginRight: spacing.xs }}>
-                    <Text style={styles.inputLabel} numberOfLines={1}>City</Text>
+                    <Text style={styles.inputLabel} numberOfLines={1}>City *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.city && styles.inputError]}
                       value={city}
-                      onChangeText={setCity}
-                      placeholder="Bengaluru"
+                      onChangeText={(val) => {
+                        setCity(val);
+                        clearError('city');
+                      }}
+                      placeholder="Enter city"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.city ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.city}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1, marginHorizontal: spacing.xs }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>State</Text>
@@ -998,7 +1135,7 @@ export default function HospitalRegistrationScreen({
                       style={styles.textInput}
                       value={stateName}
                       onChangeText={setStateName}
-                      placeholder="Karnataka"
+                      placeholder="Enter state"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -1010,7 +1147,7 @@ export default function HospitalRegistrationScreen({
                       onChangeText={setPincode}
                       keyboardType="number-pad"
                       maxLength={6}
-                      placeholder="560034"
+                      placeholder="Enter 6-digit PIN code"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -1029,11 +1166,11 @@ export default function HospitalRegistrationScreen({
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Proceed to Document Upload"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 4: Upload Documents</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -1078,20 +1215,23 @@ export default function HospitalRegistrationScreen({
                   </View>
                   <Pressable
                     style={styles.uploadBtn}
-                    onPress={() => {
-                      Alert.alert('Upload Document', 'Select replacement CEA certificate file.', [
-                        {
-                          text: 'Replace PDF',
-                          onPress: () =>
-                            setUploadedCeaDoc(`CEA_Approval_${Date.now().toString().slice(-4)}.pdf`),
-                        },
-                        { text: 'Cancel', style: 'cancel' },
-                      ]);
+                    onPress={async () => {
+                      const file = await pickDocumentOrImage();
+                      if (file) {
+                        setUploadedCeaDoc(file.name);
+                        clearError('uploadedCeaDoc');
+                      }
                     }}
                   >
                     <Text style={styles.uploadBtnText}>Replace</Text>
                   </Pressable>
                 </View>
+                {errors.uploadedCeaDoc ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.uploadedCeaDoc}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={[styles.uploadSectionTitle, { marginTop: spacing.md }]}>
                   Bio-Medical Waste Authorization Document
@@ -1112,15 +1252,11 @@ export default function HospitalRegistrationScreen({
                   </View>
                   <Pressable
                     style={styles.uploadBtn}
-                    onPress={() => {
-                      Alert.alert('Upload Document', 'Select replacement BMW certificate file.', [
-                        {
-                          text: 'Replace PDF',
-                          onPress: () =>
-                            setUploadedBmwDoc(`BMW_Clearance_${Date.now().toString().slice(-4)}.pdf`),
-                        },
-                        { text: 'Cancel', style: 'cancel' },
-                      ]);
+                    onPress={async () => {
+                      const file = await pickDocumentOrImage();
+                      if (file) {
+                        setUploadedBmwDoc(file.name);
+                      }
                     }}
                   >
                     <Text style={styles.uploadBtnText}>Replace</Text>
@@ -1136,15 +1272,15 @@ export default function HospitalRegistrationScreen({
                   accessibilityLabel="Back to Step 3"
                 >
                   <Ionicons name="arrow-back" size={16} color={colors.text} />
-                  <Text style={styles.secondaryStepBtnText}>Back to Step 3</Text>
+                  <Text style={styles.secondaryStepBtnText}>Back</Text>
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Proceed to Bank & Legal Declaration"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 5: Bank & Legal</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -1162,35 +1298,62 @@ export default function HospitalRegistrationScreen({
               <Card style={styles.formCard} padding="lg">
                 <Text style={styles.inputLabel}>Designated Bank Name *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.bankName && styles.inputError]}
                   value={bankName}
-                  onChangeText={setBankName}
-                  placeholder="e.g. HDFC Bank, SBI, ICICI"
+                  onChangeText={(val) => {
+                    setBankName(val);
+                    clearError('bankName');
+                  }}
+                  placeholder="Enter bank name"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.bankName ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.bankName}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1.4, marginRight: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Account Number *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.accountNumber && styles.inputError]}
                       value={accountNumber}
-                      onChangeText={setAccountNumber}
+                      onChangeText={(val) => {
+                        setAccountNumber(val);
+                        clearError('accountNumber');
+                      }}
                       keyboardType="number-pad"
-                      placeholder="Account number"
+                      placeholder="Enter account number"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.accountNumber ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.accountNumber}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>IFSC Code *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.ifscCode && styles.inputError]}
                       value={ifscCode}
-                      onChangeText={setIfscCode}
+                      onChangeText={(val) => {
+                        setIfscCode(val);
+                        clearError('ifscCode');
+                      }}
                       autoCapitalize="characters"
-                      placeholder="HDFC0001234"
+                      placeholder="Enter IFSC code"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.ifscCode ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.ifscCode}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
 
@@ -1200,7 +1363,7 @@ export default function HospitalRegistrationScreen({
                   value={upiId}
                   onChangeText={setUpiId}
                   autoCapitalize="none"
-                  placeholder="metroapex@upi"
+                  placeholder="Enter hospital UPI ID"
                   placeholderTextColor={colors.textMuted}
                 />
               </Card>
@@ -1209,7 +1372,10 @@ export default function HospitalRegistrationScreen({
               <Card style={styles.declarationCard} padding="md">
                 <Pressable
                   style={styles.checkboxRow}
-                  onPress={() => setIsDeclared(!isDeclared)}
+                  onPress={() => {
+                    setIsDeclared(!isDeclared);
+                    clearError('declaration');
+                  }}
                   accessibilityLabel="Agree to Clinical Establishment Terms"
                 >
                   <View
@@ -1228,6 +1394,12 @@ export default function HospitalRegistrationScreen({
                   </Text>
                 </Pressable>
               </Card>
+              {errors.declaration ? (
+                <View style={styles.errorRow}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.declaration}</Text>
+                </View>
+              ) : null}
 
               {/* Final Step Actions */}
               <View style={styles.stepBtnRow}>
@@ -1237,16 +1409,16 @@ export default function HospitalRegistrationScreen({
                   accessibilityLabel="Back to Step 4 Documents"
                 >
                   <Ionicons name="arrow-back" size={16} color={colors.text} />
-                  <Text style={styles.secondaryStepBtnText}>Back to Step 4</Text>
+                  <Text style={styles.secondaryStepBtnText}>Back</Text>
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2, backgroundColor: '#0094D4' }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0, backgroundColor: '#0094D4' }]}
                   onPress={handleRegisterHospital}
                   accessibilityLabel="Complete Hospital Registration"
                 >
                   <Ionicons name="business" size={18} color="#FFFFFF" />
-                  <Text style={styles.primaryStepBtnText}>Complete & Open Dashboard</Text>
+                  <Text style={styles.primaryStepBtnText} numberOfLines={1}>Complete</Text>
                 </Pressable>
               </View>
             </>
@@ -1265,12 +1437,13 @@ const styles = StyleSheet.create({
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
     minHeight: 56,
     backgroundColor: '#0F172A',
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
+    gap: 8,
   },
   backBtn: {
     width: 36,
@@ -1281,10 +1454,20 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginRight: 6,
+    justifyContent: 'center',
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   headerTitle: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -1312,11 +1495,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radius.full,
+    flexShrink: 0,
+    alignSelf: 'center',
   },
   verifiedBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   progressTrackerContainer: {
     backgroundColor: '#FFFFFF',
@@ -1755,6 +1941,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   secondaryStepBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1763,11 +1950,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CBD5E1',
     paddingVertical: 14,
-    paddingHorizontal: 16,
     borderRadius: radius.md,
   },
   secondaryStepBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: '#334155',
   },
@@ -1846,33 +2032,50 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   statsGrid: {
+    gap: 10,
+  },
+  statsRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'stretch',
+    gap: 10,
   },
   statBox: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: radius.md,
-    paddingVertical: 12,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
+    minHeight: 105,
+  },
+  statIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
   statNumber: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0F172A',
-    marginTop: 4,
+    textAlign: 'center',
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '600',
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 3,
+    textAlign: 'center',
   },
   actionGrid: {
     flexDirection: 'row',
@@ -1927,31 +2130,66 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderWidth: 1,
     borderRadius: radius.lg,
+    marginTop: spacing.md,
+  },
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.xs,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  summaryHeaderIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   summaryCardHeading: {
     fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: spacing.xs,
   },
   summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
+    alignItems: 'flex-start',
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 8,
+    borderBottomColor: '#F1F5F9',
+    gap: 12,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '600',
     color: '#64748B',
-    minWidth: 100,
+    width: 110,
+    lineHeight: 18,
   },
   summaryValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#0F172A',
     flex: 1,
-    textAlign: 'right',
+    textAlign: 'left',
+    lineHeight: 18,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '600',
   },
 });

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   RefreshControl,
@@ -276,6 +275,32 @@ export default function DashboardScreen() {
           />
         }
       >
+        {/* OneBuddy Medical Brand Showcase Header */}
+        <View style={styles.oneBuddyBrandBanner}>
+          <View style={styles.oneBuddyLogoWrap}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.oneBuddyLogoImg}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.oneBuddyBrandTextWrap}>
+            <View style={styles.oneBuddyTitleRow}>
+              <Text style={styles.oneBuddyTitleOne}>One</Text>
+              <Text style={styles.oneBuddyTitleBuddy}>Buddy</Text>
+              <Text style={styles.oneBuddyTitleMedical}> Medical</Text>
+            </View>
+            <View style={styles.oneBuddyTaglineRow}>
+              <Text style={styles.oneBuddyTaglineMuted}>One App. Many Services. </Text>
+              <Text style={styles.oneBuddyTaglineGreen}>One Buddy.</Text>
+            </View>
+          </View>
+          <View style={styles.oneBuddyStatusBadge}>
+            <Ionicons name="shield-checkmark" size={12} color="#16A34A" />
+            <Text style={styles.oneBuddyStatusBadgeText}>LIVE</Text>
+          </View>
+        </View>
+
         {/* Healthcare Categories in Front & Registration Portals */}
         <View style={styles.categoriesSection}>
           <View style={styles.categoriesSectionHeader}>
@@ -521,8 +546,6 @@ export default function DashboardScreen() {
                   const upcoming = consultations.find((c) => c.status === 'upcoming') || consultations[0];
                   if (upcoming) {
                     navigation.navigate('LiveMeeting', { consultation: upcoming });
-                  } else {
-                    Alert.alert('No Live Consultations', 'All online consultations are completed.');
                   }
                 }}
               >
@@ -709,10 +732,6 @@ export default function DashboardScreen() {
                       style={styles.acceptBtn}
                       onPress={() => {
                         acceptOPBooking(b.id);
-                        Alert.alert(
-                          'Booking Accepted',
-                          `Patient ${b.patientName} has been notified via App, Mail, and WhatsApp.`,
-                        );
                       }}
                     >
                       <Ionicons name="checkmark-circle-outline" size={15} color="#FFFFFF" />
@@ -815,10 +834,6 @@ export default function DashboardScreen() {
                       style={styles.acceptBtn}
                       onPress={() => {
                         acceptHomeVisit(v.id);
-                        Alert.alert(
-                          'Home Visit Accepted',
-                          'Your contact details have been shared with the patient. Ready for navigation.',
-                        );
                       }}
                     >
                       <Ionicons name="checkmark-circle-outline" size={15} color="#FFFFFF" />
@@ -1425,5 +1440,99 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     marginVertical: 1,
+  },
+  // OneBuddy Medical Brand Banner
+  oneBuddyBrandBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2F7C9',
+    shadowColor: '#5AB31C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  oneBuddyLogoWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#DCFCE7',
+    shadowColor: '#5AB31C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 6,
+    elevation: 2,
+    marginRight: 10,
+  },
+  oneBuddyLogoImg: {
+    width: 30,
+    height: 30,
+  },
+  oneBuddyBrandTextWrap: {
+    flex: 1,
+  },
+  oneBuddyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  oneBuddyTitleOne: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#111827',
+    letterSpacing: -0.3,
+  },
+  oneBuddyTitleBuddy: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#5AB31C',
+    letterSpacing: -0.3,
+  },
+  oneBuddyTitleMedical: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: -0.3,
+  },
+  oneBuddyTaglineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  oneBuddyTaglineMuted: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  oneBuddyTaglineGreen: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#5AB31C',
+  },
+  oneBuddyStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  oneBuddyStatusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.3,
   },
 });

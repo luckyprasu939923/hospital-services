@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
   Image,
   Modal,
@@ -75,7 +74,6 @@ export default function HospitalDoctorsScreen() {
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('Required', 'Doctor name is required');
       return;
     }
 
@@ -93,11 +91,10 @@ export default function HospitalDoctorsScreen() {
         availableTimeStart: timeStart,
         availableTimeEnd: timeEnd,
       });
-      Alert.alert('Doctor Updated', `${name}'s schedule and profile have been saved.`);
     } else {
       addDoctor({
         name,
-        photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=400&q=80',
+        photo: 'https://api.dicebear.com/7.x/personas/png?seed=DrArjun&backgroundColor=dcfce7',
         specialization,
         qualification,
         experience: parseInt(experience, 10) || 5,
@@ -109,7 +106,6 @@ export default function HospitalDoctorsScreen() {
         availableTimeEnd: timeEnd,
         blockedDates: [],
       });
-      Alert.alert('Doctor Added', `${name} is now available for OP bookings on One Buddy Customer App.`);
     }
 
     setModalVisible(false);
@@ -195,12 +191,6 @@ export default function HospitalDoctorsScreen() {
             ]}
             onPress={() => {
               toggleDoctorLeave(item.id, '2026-10-01');
-              Alert.alert(
-                'Leave Calendar Updated',
-                isLeaveToday
-                  ? `${item.name} is now unblocked and available today.`
-                  : `${item.name} marked on leave for today. Existing slots locked to prevent double-booking.`,
-              );
             }}
           >
             <Ionicons
@@ -247,10 +237,10 @@ export default function HospitalDoctorsScreen() {
         <Pressable
           style={styles.addDoctorBtn}
           onPress={() => (navigation as any).navigate('RegisterDoctor', { mode: 'add' })}
-          accessibilityLabel="Register New Doctor"
+          accessibilityLabel="Add New Doctor"
         >
           <Ionicons name="person-add" size={16} color="#FFFFFF" />
-          <Text style={styles.addDoctorBtnText}>Register Doctor</Text>
+          <Text style={styles.addDoctorBtnText}>Add Doctor</Text>
         </Pressable>
       </View>
 

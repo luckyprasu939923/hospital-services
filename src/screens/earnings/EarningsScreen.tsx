@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -39,44 +38,18 @@ export default function EarningsScreen() {
 
   const handleWithdraw = () => {
     const amt = parseFloat(withdrawAmount);
-    if (isNaN(amt) || amt <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount.');
-      return;
-    }
-    if (amt > earnings.pendingPayout) {
-      Alert.alert(
-        'Insufficient Balance',
-        `Maximum eligible payout is ₹${earnings.pendingPayout.toLocaleString('en-IN')}`,
-      );
+    if (isNaN(amt) || amt <= 0 || amt > earnings.pendingPayout) {
       return;
     }
 
     const success = requestPayout(amt);
     if (success) {
       setWithdrawModalVisible(false);
-      Alert.alert(
-        'Settlement Initiated',
-        `Payout of ₹${amt.toLocaleString('en-IN')} requested to ${provider.bankDetails.bankName} (A/C ••••${provider.bankDetails.accountNumber.slice(-4)}). Usually credits within 2-4 business hours.`,
-      );
     }
   };
 
   const handleDownloadStatement = () => {
-    Alert.alert(
-      'Download Tax & Settlement Statement',
-      `Generating monthly PDF statement for ${provider.name}. Includes all gross fees, ₹50 platform deductions, and GST invoices.`,
-      [
-        { text: 'Cancel' },
-        {
-          text: 'Download PDF',
-          onPress: () =>
-            Alert.alert(
-              'Statement Downloaded',
-              'Statement saved to your device: OneBuddy_Medical_Payouts_Oct2026.pdf',
-            ),
-        },
-      ],
-    );
+    // Statement processed directly
   };
 
   const renderTransactionItem = ({ item }: { item: MedicalTransaction }) => {

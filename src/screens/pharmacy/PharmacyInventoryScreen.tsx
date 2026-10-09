@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
   Image,
   Modal,
@@ -94,7 +93,6 @@ export default function PharmacyInventoryScreen() {
 
   const handleSaveProduct = () => {
     if (!name.trim()) {
-      Alert.alert('Required', 'Please enter a product name');
       return;
     }
 
@@ -109,7 +107,6 @@ export default function PharmacyInventoryScreen() {
         lowStockAlert: parseInt(lowStockAlert, 10) || 5,
         prescriptionRequired: rxRequired,
       });
-      Alert.alert('Product Updated', `${name} updated in pharmacy inventory.`);
     } else {
       addProduct({
         name,
@@ -123,7 +120,6 @@ export default function PharmacyInventoryScreen() {
         image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80',
         expiryDate: '2027-12-31',
       });
-      Alert.alert('Product Added', `${name} added to pharmacy catalog.`);
     }
 
     setAddModalVisible(false);
@@ -242,17 +238,7 @@ export default function PharmacyInventoryScreen() {
           <Pressable
             style={styles.bulkBtn}
             onPress={() => {
-              Alert.alert(
-                'Bulk Import / Excel Upload',
-                'Upload CSV or Excel sheet with inventory items (Name, Brand, Active Formula, Price, Quantity).',
-                [
-                  { text: 'Cancel' },
-                  {
-                    text: 'Upload CSV',
-                    onPress: () => Alert.alert('Bulk Upload Complete', '145 items imported and synced with One Buddy.'),
-                  },
-                ],
-              );
+              // Quick mock bulk inventory sync
             }}
           >
             <Ionicons name="cloud-upload-outline" size={15} color={colors.textSecondary} />
@@ -371,10 +357,6 @@ export default function PharmacyInventoryScreen() {
                   if (selectedItemForRestock && !isNaN(qty) && qty > 0) {
                     restockProduct(selectedItemForRestock.id, qty);
                     setRestockModalVisible(false);
-                    Alert.alert(
-                      'Restock Successful',
-                      `Added ${qty} units to ${selectedItemForRestock.name}. Customers can now place orders.`,
-                    );
                   }
                 }}
               >

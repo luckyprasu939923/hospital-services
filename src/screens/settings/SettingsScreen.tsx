@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -45,7 +44,6 @@ export default function SettingsScreen() {
       serviceRadiusKm: parseInt(radiusKm, 10) || 12,
     });
     setHoursModal(false);
-    Alert.alert('Settings Updated', 'Consultation fees and visit radius have been updated.');
   };
 
   return (
@@ -145,19 +143,10 @@ export default function SettingsScreen() {
 
           <View style={[styles.legalDataRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.legalFieldLabel}>Compliance Document:</Text>
-            <Pressable
-              style={styles.legalDocPressable}
-              onPress={() => {
-                Alert.alert(
-                  'Verified Regulatory Document',
-                  `Document File: ${provider.licenseDocName}\nAuthority: ${provider.licenseType}\nStatus: Verified by One Buddy Legal Compliance Desk.`,
-                );
-              }}
-              accessibilityLabel="View compliance document"
-            >
+            <View style={styles.legalDocPressable}>
               <Ionicons name="document-attach" size={13} color={colors.primary} />
               <Text style={styles.docLinkText} numberOfLines={1}>{provider.licenseDocName}</Text>
-            </Pressable>
+            </View>
           </View>
         </Card>
 
@@ -278,21 +267,8 @@ export default function SettingsScreen() {
         <Pressable
           style={styles.logoutBtn}
           onPress={() => {
-            Alert.alert(
-              'Sign Out',
-              'Are you sure you want to sign out of One Buddy Medical Provider Portal?',
-              [
-                { text: 'Cancel' },
-                {
-                  text: 'Sign Out',
-                  style: 'destructive',
-                  onPress: () => {
-                    logout();
-                    navigation.navigate('Auth');
-                  },
-                },
-              ],
-            );
+            logout();
+            navigation.navigate('Auth');
           }}
           accessibilityLabel="Sign Out"
         >

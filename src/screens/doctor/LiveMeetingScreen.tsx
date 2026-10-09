@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -108,12 +107,7 @@ export default function LiveMeetingScreen() {
     });
 
     updateConsultationStatus(consultation.id, 'completed', notes);
-
-    Alert.alert(
-      'Consultation Completed & Rx Sent!',
-      `Digital prescription generated and dispatched to ${consultation.patientName} via One Buddy App, Mail, and WhatsApp. Net payout of ₹${consultation.netPayout} settled.`,
-      [{ text: 'OK', onPress: () => navigation.goBack() }],
-    );
+    navigation.goBack();
   };
 
   return (
@@ -289,25 +283,8 @@ export default function LiveMeetingScreen() {
         <Pressable
           style={styles.endCallBtn}
           onPress={() => {
-            Alert.alert(
-              'End Video Consultation',
-              'Would you like to complete the consult and write the digital prescription now?',
-              [
-                { text: 'Cancel' },
-                {
-                  text: 'Write Prescription',
-                  onPress: () => setShowRxSheet(true),
-                },
-                {
-                  text: 'End Call Only',
-                  style: 'destructive',
-                  onPress: () => {
-                    updateConsultationStatus(consultation.id, 'completed');
-                    navigation.goBack();
-                  },
-                },
-              ],
-            );
+            updateConsultationStatus(consultation.id, 'completed');
+            navigation.goBack();
           }}
         >
           <Ionicons name="call" size={24} color="#FFFFFF" />

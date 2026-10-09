@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -71,7 +70,6 @@ export default function ProfileScreen() {
       pincode: editPincode,
     });
     setEditProfileModal(false);
-    Alert.alert('Profile Saved', 'Your provider profile details have been updated.');
   };
 
   const handleSaveBank = () => {
@@ -83,7 +81,6 @@ export default function ProfileScreen() {
       upiId: upi,
     });
     setEditBankModal(false);
-    Alert.alert('Bank Details Saved', 'Bank account for payouts has been updated.');
   };
 
   return (
@@ -176,19 +173,12 @@ export default function ProfileScreen() {
 
           <View style={[styles.licenseDataRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.licenseFieldLabel}>Document Uploaded:</Text>
-            <Pressable
+            <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '65%', justifyContent: 'flex-end' }}
-              onPress={() => {
-                Alert.alert(
-                  'Verified Regulatory Document',
-                  `Document File: ${provider.licenseDocName}\nStatus: Verified by One Buddy Compliance Team.`,
-                );
-              }}
-              accessibilityLabel="View verified document"
             >
               <Ionicons name="document-attach" size={13} color={colors.primary} />
               <Text style={styles.docLinkText} numberOfLines={1}>{provider.licenseDocName}</Text>
-            </Pressable>
+            </View>
           </View>
         </Card>
 
@@ -347,21 +337,8 @@ export default function ProfileScreen() {
         <Pressable
           style={styles.logoutBtn}
           onPress={() => {
-            Alert.alert(
-              'Sign Out',
-              'Are you sure you want to sign out of One Buddy Medical Provider Portal?',
-              [
-                { text: 'Cancel' },
-                {
-                  text: 'Sign Out',
-                  style: 'destructive',
-                  onPress: () => {
-                    logout();
-                    navigation.navigate('Auth');
-                  },
-                },
-              ],
-            );
+            logout();
+            navigation.navigate('Auth');
           }}
         >
           <Ionicons name="log-out-outline" size={18} color={colors.danger} />
@@ -384,8 +361,15 @@ export default function ProfileScreen() {
               <Text style={styles.inputLabel}>Provider / Organization Name</Text>
               <TextInput style={styles.modalInput} value={editName} onChangeText={setEditName} />
 
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput style={styles.modalInput} value={editPhone} onChangeText={setEditPhone} />
+              <Text style={styles.inputLabel}>Phone Number (10 Digits)</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={editPhone}
+                onChangeText={(val) => setEditPhone(val.replace(/\D/g, '').slice(0, 10))}
+                keyboardType="phone-pad"
+                maxLength={10}
+                placeholder="Enter 10-digit mobile number"
+              />
 
               <Text style={styles.inputLabel}>Email Address</Text>
               <TextInput style={styles.modalInput} value={editEmail} onChangeText={setEditEmail} />
@@ -503,7 +487,6 @@ export default function ProfileScreen() {
                     serviceRadiusKm: parseInt(radiusKm, 10) || 10,
                   });
                   setHoursModal(false);
-                  Alert.alert('Settings Updated', 'Consultation fees and visit radius updated.');
                 }}
               >
                 <Text style={styles.submitBtnText}>Update</Text>

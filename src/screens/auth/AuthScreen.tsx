@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -62,17 +63,29 @@ export default function AuthScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Brand Executive Header */}
+        {/* Brand Executive Header - Themed directly after OneBuddy brand */}
         <View style={styles.brandHeader}>
-          <View style={styles.logoBadge}>
-            <Ionicons name="medical" size={32} color="#FFFFFF" />
+          <View style={styles.logoHalo}>
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={styles.logoImg}
+              resizeMode="contain"
+            />
           </View>
-          <Text style={styles.brandName}>One Buddy Medical</Text>
+          <View style={styles.brandTitleRow}>
+            <Text style={styles.brandOne}>One</Text>
+            <Text style={styles.brandBuddy}>Buddy</Text>
+            <Text style={styles.brandMedical}> Medical</Text>
+          </View>
+          <View style={styles.taglineRow}>
+            <Text style={styles.taglineMuted}>One App. Many Services. </Text>
+            <Text style={styles.taglineHighlight}>One Buddy.</Text>
+          </View>
           <Text style={styles.brandSubtitle}>
             Healthcare Service Provider Portal (Hospital • Doctor • Pharmacy)
           </Text>
           <View style={styles.taglinePill}>
-            <Ionicons name="shield-checkmark" size={13} color={colors.primary} />
+            <Ionicons name="shield-checkmark" size={13} color="#16A34A" />
             <Text style={styles.taglineText}>Govt & Clinical Establishment Act Compliant</Text>
           </View>
         </View>
@@ -182,43 +195,82 @@ const styles = StyleSheet.create({
   brandHeader: {
     alignItems: 'center',
     marginBottom: 20,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
     paddingVertical: 24,
     paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E2F7C9',
+    shadowColor: '#5AB31C',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
     elevation: 4,
   },
-  logoBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary,
+  logoHalo: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    shadowColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: '#DCFCE7',
+    shadowColor: '#5AB31C',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  brandName: {
-    fontSize: 22,
+  logoImg: {
+    width: 58,
+    height: 58,
+  },
+  brandTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandOne: {
+    fontSize: 27,
+    fontWeight: '900',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  brandBuddy: {
+    fontSize: 27,
+    fontWeight: '900',
+    color: '#5AB31C',
+    letterSpacing: -0.5,
+  },
+  brandMedical: {
+    fontSize: 27,
     fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    color: '#15803D',
+    letterSpacing: -0.5,
+  },
+  taglineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  taglineMuted: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  taglineHighlight: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#5AB31C',
   },
   brandSubtitle: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 6,
     lineHeight: 18,
     maxWidth: 320,
   },
@@ -226,18 +278,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F0FDF4',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: radius.full,
     marginTop: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: '#BBF7D0',
   },
   taglineText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#CBD5E1',
+    color: '#15803D',
   },
   sectionHeaderRow: {
     marginBottom: 12,
@@ -391,12 +443,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: radius.md,
+    backgroundColor: '#5AB31C',
+    paddingVertical: 13,
+    borderRadius: radius.full,
+    shadowColor: '#5AB31C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 4,
   },
   enterLiveOpsBtnText: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },

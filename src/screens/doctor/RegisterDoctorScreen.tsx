@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -19,6 +18,7 @@ import Card from '../../components/Card';
 import { RootStackParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
 import { HospitalDoctor } from '../../types';
+import { pickPhotoFromGallery } from '../../utils/filePicker';
 
 const SPECIALIZATIONS = [
   'General Medicine',
@@ -37,20 +37,34 @@ const SPECIALIZATIONS = [
 
 const DOCTOR_AVATAR_PRESETS = [
   {
-    label: 'Male Doctor 1',
-    uri: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=400&q=80',
+    id: 'av-1',
+    label: 'Physician (M)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrArjun&backgroundColor=dcfce7',
   },
   {
-    label: 'Female Doctor 1',
-    uri: 'https://images.unsplash.com/photo-1594824813587-0b1a0e5b7c6c?auto=format&fit=crop&w=400&q=80',
+    id: 'av-2',
+    label: 'Consultant (F)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrPriya&backgroundColor=fee2e2',
   },
   {
-    label: 'Male Doctor 2',
-    uri: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
+    id: 'av-3',
+    label: 'Specialist (M)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrRahul&backgroundColor=e0f2fe',
   },
   {
-    label: 'Female Doctor 2',
-    uri: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=400&q=80',
+    id: 'av-4',
+    label: 'Surgeon (F)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrAnanya&backgroundColor=fef3c7',
+  },
+  {
+    id: 'av-5',
+    label: 'Cardiologist (M)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrVikram&backgroundColor=f3e8ff',
+  },
+  {
+    id: 'av-6',
+    label: 'Pediatrician (F)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrMeera&backgroundColor=ccfbf1',
   },
 ];
 
@@ -85,6 +99,14 @@ export default function RegisterDoctorScreen() {
   const [photo, setPhoto] = useState(
     existingDoctor?.photo || DOCTOR_AVATAR_PRESETS[0].uri,
   );
+  const isCustomPhoto = !DOCTOR_AVATAR_PRESETS.some((p) => p.uri === photo);
+
+  const handleUploadPhoto = async () => {
+    const picked = await pickPhotoFromGallery();
+    if (picked && picked.uri) {
+      setPhoto(picked.uri);
+    }
+  };
   const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>(
     existingDoctor?.gender || 'Male',
   );
@@ -140,14 +162,28 @@ export default function RegisterDoctorScreen() {
   // Regulatory Declaration
   const [declared, setDeclared] = useState(true);
 
+  // Field inline error validation states
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const toggleDay = (day: string) => {
     if (availableDays.includes(day)) {
       if (availableDays.length === 1) {
-        Alert.alert('Required', 'Doctor must have at least one working day.');
+        setErrors((prev) => ({ ...prev, availableDays: 'Doctor must have at least one working day.' }));
         return;
       }
+      clearError('availableDays');
       setAvailableDays(availableDays.filter((d) => d !== day));
     } else {
+      clearError('availableDays');
       setAvailableDays([...availableDays, day]);
     }
   };
@@ -164,32 +200,38 @@ export default function RegisterDoctorScreen() {
   };
 
   const handleSubmit = () => {
+    const newErrors: Record<string, string> = {};
     const trimmedName = name.trim();
     if (!trimmedName || trimmedName === 'Dr.') {
-      Alert.alert('Required Field', 'Please enter doctor full name.');
-      return;
+      newErrors.name = 'Please enter doctor full name.';
+    }
+
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+    if (!phone.trim() || cleanPhone.length !== 10) {
+      newErrors.phone = 'Please enter a valid 10-digit mobile number.';
     }
 
     if (!councilRegNumber.trim()) {
-      Alert.alert(
-        'Required Field',
-        'Please enter Medical Council Registration number.',
-      );
-      return;
+      newErrors.councilRegNumber = 'Please enter Medical Council Registration number.';
     }
 
     if (!qualification.trim()) {
-      Alert.alert('Required Field', 'Please enter doctor qualification degrees.');
-      return;
+      newErrors.qualification = 'Please enter doctor qualification degrees.';
+    }
+
+    if (availableDays.length === 0) {
+      newErrors.availableDays = 'Doctor must have at least one working day.';
     }
 
     if (!declared) {
-      Alert.alert(
-        'Regulatory Declaration',
-        'Please verify that doctor credentials and registration details are authentic.',
-      );
+      newErrors.declared = 'Please verify that doctor credentials and registration details are authentic.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    setErrors({});
 
     const issuesArray = healthIssues
       .split(',')
@@ -220,18 +262,10 @@ export default function RegisterDoctorScreen() {
 
     if (isEditing && existingDoctor) {
       updateDoctor(existingDoctor.id, doctorData);
-      Alert.alert(
-        'Doctor Profile Updated',
-        `${trimmedName}'s credentials, fees and schedule have been updated.`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
-      );
+      navigation.goBack();
     } else {
       addDoctor(doctorData);
-      Alert.alert(
-        'Doctor Successfully Registered',
-        `${trimmedName} has been registered to the medical provider roster with license verification.`,
-        [{ text: 'View Doctor Roster', onPress: () => navigation.goBack() }],
-      );
+      navigation.goBack();
     }
   };
 
@@ -275,48 +309,83 @@ export default function RegisterDoctorScreen() {
             <Text style={styles.sectionHeading}>1. Personal & Contact Details</Text>
           </View>
 
-          {/* Avatar Preview & Preset Selection */}
-          <View style={styles.avatarRow}>
-            <Image source={{ uri: photo }} style={styles.avatarPreview} />
-            <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <Text style={styles.avatarPickerLabel}>Select Doctor Photo Preset:</Text>
-              <View style={styles.presetsWrap}>
+          {/* Doctor Profile Picture: Avatar Selection + Upload Photo */}
+          <View style={styles.photoPickerContainer}>
+            <View style={styles.photoPreviewSection}>
+              <View style={styles.photoAvatarWrap}>
+                <Image source={{ uri: photo }} style={styles.avatarPreview} />
+              </View>
+              {isCustomPhoto && (
+                <View style={styles.customPhotoTag}>
+                  <Ionicons name="checkmark-circle" size={10} color="#15803D" />
+                  <Text style={styles.customPhotoTagText}>Custom Photo</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.photoActionsSection}>
+              {/* 1. Doctor Avatar Presets (First) */}
+              <Text style={styles.avatarPickerLabel}>Select Doctor Avatar:</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.presetsWrap}
+              >
                 {DOCTOR_AVATAR_PRESETS.map((preset, index) => {
                   const active = photo === preset.uri;
                   return (
                     <Pressable
-                      key={index}
+                      key={preset.id || index}
                       style={[
                         styles.presetChip,
                         active && styles.presetChipActive,
                       ]}
                       onPress={() => setPhoto(preset.uri)}
+                      accessibilityLabel={`Select Doctor Avatar ${index + 1}`}
                     >
                       <Image source={{ uri: preset.uri }} style={styles.presetMiniImg} />
-                      <Text
-                        style={[
-                          styles.presetChipText,
-                          active && styles.presetChipTextActive,
-                        ]}
-                      >
-                        {preset.label}
-                      </Text>
+                      {active && (
+                        <View style={styles.presetActiveCheck}>
+                          <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                        </View>
+                      )}
                     </Pressable>
                   );
                 })}
-              </View>
+              </ScrollView>
+
+              {/* 2. Upload Photo Option (Second) */}
+              <Text style={[styles.avatarPickerLabel, { marginTop: 10 }]}>Or Upload Photo:</Text>
+              <Pressable
+                style={styles.uploadPhotoBtn}
+                onPress={handleUploadPhoto}
+                accessibilityLabel="Upload doctor photo from phone"
+              >
+                <Ionicons name="cloud-upload-outline" size={15} color="#FFFFFF" />
+                <Text style={styles.uploadPhotoBtnText}>Upload Photo</Text>
+              </Pressable>
+              <Text style={styles.photoHintText}>Pick custom photo from phone storage</Text>
             </View>
           </View>
 
           {/* Full Name */}
           <Text style={styles.inputLabel}>Doctor Full Name *</Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, errors.name && styles.inputError]}
             value={name}
-            onChangeText={setName}
-            placeholder="e.g. Dr. Ramesh Gupta"
+            onChangeText={(val) => {
+              setName(val);
+              clearError('name');
+            }}
+            placeholder="Enter doctor full name"
             placeholderTextColor={colors.textMuted}
           />
+          {errors.name ? (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle" size={14} color="#EF4444" />
+              <Text style={styles.errorText}>{errors.name}</Text>
+            </View>
+          ) : null}
 
           {/* Gender Pills */}
           <Text style={styles.inputLabel}>Gender</Text>
@@ -345,15 +414,26 @@ export default function RegisterDoctorScreen() {
           {/* Contact Row */}
           <View style={styles.dualInputRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.inputLabel}>Mobile Phone</Text>
+              <Text style={styles.inputLabel}>Mobile Phone *</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, errors.phone && styles.inputError]}
                 keyboardType="phone-pad"
+                maxLength={10}
                 value={phone}
-                onChangeText={setPhone}
-                placeholder="10-digit phone"
+                onChangeText={(val) => {
+                  const digits = val.replace(/\D/g, '').slice(0, 10);
+                  setPhone(digits);
+                  clearError('phone');
+                }}
+                placeholder="Enter 10-digit mobile number"
                 placeholderTextColor={colors.textMuted}
               />
+              {errors.phone ? (
+                <View style={styles.errorRow}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.phone}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.inputLabel}>Official Email</Text>
@@ -363,7 +443,7 @@ export default function RegisterDoctorScreen() {
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
-                placeholder="dr.name@hospital.com"
+                placeholder="Enter doctor email address"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -381,17 +461,26 @@ export default function RegisterDoctorScreen() {
 
           {/* Council Reg Number */}
           <Text style={styles.inputLabel}>State Medical Council / MCI Reg No. *</Text>
-          <View style={styles.regInputWrap}>
+          <View style={[styles.regInputWrap, errors.councilRegNumber && styles.inputError]}>
             <Ionicons name="document-text" size={17} color={colors.hospitalRed} />
             <TextInput
               style={styles.regTextInput}
               value={councilRegNumber}
-              onChangeText={setCouncilRegNumber}
-              placeholder="e.g. MCI-2018-84291 or SMC/DL/5491"
+              onChangeText={(val) => {
+                setCouncilRegNumber(val);
+                clearError('councilRegNumber');
+              }}
+              placeholder="Enter council registration number"
               placeholderTextColor={colors.textMuted}
               autoCapitalize="characters"
             />
           </View>
+          {errors.councilRegNumber ? (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle" size={14} color="#EF4444" />
+              <Text style={styles.errorText}>{errors.councilRegNumber}</Text>
+            </View>
+          ) : null}
 
           {/* Specialization Selection */}
           <Text style={styles.inputLabel}>Primary Clinical Specialization *</Text>
@@ -429,12 +518,21 @@ export default function RegisterDoctorScreen() {
             <View style={{ flex: 2 }}>
               <Text style={styles.inputLabel}>Degree / Qualifications *</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, errors.qualification && styles.inputError]}
                 value={qualification}
-                onChangeText={setQualification}
-                placeholder="e.g. MBBS, MD (Cardio), DNB"
+                onChangeText={(val) => {
+                  setQualification(val);
+                  clearError('qualification');
+                }}
+                placeholder="Enter qualifications and degrees"
                 placeholderTextColor={colors.textMuted}
               />
+              {errors.qualification ? (
+                <View style={styles.errorRow}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.qualification}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.inputLabel}>Experience (Yrs)</Text>
@@ -443,7 +541,7 @@ export default function RegisterDoctorScreen() {
                 keyboardType="numeric"
                 value={experience}
                 onChangeText={setExperience}
-                placeholder="e.g. 12"
+                placeholder="Enter experience in years"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -466,7 +564,7 @@ export default function RegisterDoctorScreen() {
                 keyboardType="numeric"
                 value={consultationFee}
                 onChangeText={setConsultationFee}
-                placeholder="e.g. 750"
+                placeholder="Enter in-person OPD fee"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -477,7 +575,7 @@ export default function RegisterDoctorScreen() {
                 keyboardType="numeric"
                 value={onlineFee}
                 onChangeText={setOnlineFee}
-                placeholder="e.g. 600"
+                placeholder="Enter online video fee"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -508,7 +606,7 @@ export default function RegisterDoctorScreen() {
           </View>
 
           {/* Available Working Days */}
-          <Text style={styles.inputLabel}>Available Practice Days</Text>
+          <Text style={styles.inputLabel}>Available Practice Days *</Text>
           <View style={styles.daysRow}>
             {DAYS_OF_WEEK.map((d) => {
               const active = availableDays.includes(d);
@@ -525,6 +623,12 @@ export default function RegisterDoctorScreen() {
               );
             })}
           </View>
+          {errors.availableDays ? (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle" size={14} color="#EF4444" />
+              <Text style={styles.errorText}>{errors.availableDays}</Text>
+            </View>
+          ) : null}
 
           {/* Timings */}
           <View style={styles.dualInputRow}>
@@ -534,7 +638,7 @@ export default function RegisterDoctorScreen() {
                 style={styles.textInput}
                 value={timeStart}
                 onChangeText={setTimeStart}
-                placeholder="09:00 AM"
+                placeholder="Enter OPD start time"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -544,7 +648,7 @@ export default function RegisterDoctorScreen() {
                 style={styles.textInput}
                 value={timeEnd}
                 onChangeText={setTimeEnd}
-                placeholder="05:00 PM"
+                placeholder="Enter OPD end time"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -581,7 +685,7 @@ export default function RegisterDoctorScreen() {
             numberOfLines={2}
             value={healthIssues}
             onChangeText={setHealthIssues}
-            placeholder="e.g. Hypertension, Arrhythmia, Angina, High Cholesterol"
+            placeholder="Enter handled symptoms and conditions"
             placeholderTextColor={colors.textMuted}
           />
 
@@ -592,7 +696,7 @@ export default function RegisterDoctorScreen() {
             numberOfLines={3}
             value={bio}
             onChangeText={setBio}
-            placeholder="Write short professional bio, medical research, or affiliations..."
+            placeholder="Enter professional biography and affiliations"
             placeholderTextColor={colors.textMuted}
           />
         </Card>
@@ -620,11 +724,17 @@ export default function RegisterDoctorScreen() {
 
           <Pressable
             style={styles.declarationRow}
-            onPress={() => setDeclared(!declared)}
+            onPress={() => {
+              setDeclared(!declared);
+              clearError('declared');
+            }}
           >
             <Switch
               value={declared}
-              onValueChange={setDeclared}
+              onValueChange={(val) => {
+                setDeclared(val);
+                clearError('declared');
+              }}
               trackColor={{ false: colors.borderLight, true: colors.primaryLight }}
               thumbColor={declared ? colors.primary : colors.textMuted}
             />
@@ -633,6 +743,12 @@ export default function RegisterDoctorScreen() {
               Medical Council / NMC and is certified to practice healthcare.
             </Text>
           </Pressable>
+          {errors.declared ? (
+            <View style={[styles.errorRow, { marginTop: 8 }]}>
+              <Ionicons name="alert-circle" size={14} color="#EF4444" />
+              <Text style={styles.errorText}>{errors.declared}</Text>
+            </View>
+          ) : null}
         </Card>
 
         {/* Action Submit Button */}
@@ -729,18 +845,91 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
   },
-  avatarRow: {
+  photoPickerContainer: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: spacing.md,
+  },
+  photoPreviewSection: {
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    justifyContent: 'center',
+  },
+  photoAvatarWrap: {
+    position: 'relative',
+    width: 68,
+    height: 68,
   },
   avatarPreview: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FFFFFF',
     borderWidth: 2,
-    borderColor: colors.primary,
-    backgroundColor: colors.borderLight,
+    borderColor: colors.borderLight,
+  },
+  photoCameraOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    elevation: 3,
+  },
+  customPhotoTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 6,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  customPhotoTagText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  photoActionsSection: {
+    flex: 1,
+  },
+  uploadPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  uploadPhotoBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  photoHintText: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 3,
+    marginBottom: 8,
   },
   avatarPickerLabel: {
     fontSize: 11,
@@ -750,37 +939,42 @@ const styles = StyleSheet.create({
   },
   presetsWrap: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
+    alignItems: 'center',
+    paddingVertical: 2,
   },
   presetChip: {
-    flexDirection: 'row',
+    position: 'relative',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: 4,
+    justifyContent: 'center',
   },
   presetChipActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryLight,
   },
   presetMiniImg: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
-  presetChipText: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  presetChipTextActive: {
-    color: colors.primary,
-    fontWeight: '800',
+  presetActiveCheck: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   inputLabel: {
     fontSize: 11.5,
@@ -798,6 +992,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text,
     backgroundColor: colors.background,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '600',
   },
   pillsRow: {
     flexDirection: 'row',

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +20,7 @@ import Card from '../../components/Card';
 import { RootStackParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
 import { HospitalDoctor } from '../../types';
+import { pickDocumentOrImage, pickPhotoFromGallery } from '../../utils/filePicker';
 
 // Doctor Practice Options / Designations (Required field for Doctor registration)
 const DOCTOR_PRACTICE_OPTIONS = [
@@ -63,20 +63,34 @@ const MEDICAL_COUNCILS = [
 
 const DOCTOR_AVATAR_PRESETS = [
   {
-    label: 'Male Doctor 1',
-    uri: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=400&q=80',
+    id: 'av-1',
+    label: 'Physician (M)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrArjun&backgroundColor=dcfce7',
   },
   {
-    label: 'Female Doctor 1',
-    uri: 'https://images.unsplash.com/photo-1594824813587-0b1a0e5b7c6c?auto=format&fit=crop&w=400&q=80',
+    id: 'av-2',
+    label: 'Consultant (F)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrPriya&backgroundColor=fee2e2',
   },
   {
-    label: 'Male Doctor 2',
-    uri: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
+    id: 'av-3',
+    label: 'Specialist (M)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrRahul&backgroundColor=e0f2fe',
   },
   {
-    label: 'Female Doctor 2',
-    uri: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=400&q=80',
+    id: 'av-4',
+    label: 'Surgeon (F)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrAnanya&backgroundColor=fef3c7',
+  },
+  {
+    id: 'av-5',
+    label: 'Cardiologist (M)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrVikram&backgroundColor=f3e8ff',
+  },
+  {
+    id: 'av-6',
+    label: 'Pediatrician (F)',
+    uri: 'https://api.dicebear.com/7.x/personas/png?seed=DrMeera&backgroundColor=ccfbf1',
   },
 ];
 
@@ -124,6 +138,14 @@ export default function DoctorRegistrationScreen({
   const [photo, setPhoto] = useState(
     existingDoctor?.photo || DOCTOR_AVATAR_PRESETS[0].uri,
   );
+  const isCustomPhoto = !DOCTOR_AVATAR_PRESETS.some((p) => p.uri === photo);
+
+  const handleUploadPhoto = async () => {
+    const picked = await pickPhotoFromGallery();
+    if (picked && picked.uri) {
+      setPhoto(picked.uri);
+    }
+  };
   const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>(
     existingDoctor?.gender || 'Male',
   );
@@ -182,75 +204,126 @@ export default function DoctorRegistrationScreen({
   const [ifscCode, setIfscCode] = useState('ICIC0000021');
   const [upiId, setUpiId] = useState('dr.rajesh@icici');
   const [isDeclared, setIsDeclared] = useState(true);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
 
   const toggleDay = (day: string) => {
     if (availableDays.includes(day)) {
       if (availableDays.length === 1) {
-        Alert.alert('Required', 'Doctor must have at least one consulting day.');
+        setErrors((prev) => ({ ...prev, availableDays: 'Doctor must have at least one consulting day.' }));
         return;
       }
+      clearError('availableDays');
       setAvailableDays(availableDays.filter((d) => d !== day));
     } else {
+      clearError('availableDays');
       setAvailableDays([...availableDays, day]);
     }
   };
 
   const handleNextStep = () => {
     if (currentStep === 1) {
+      const newErrors: Record<string, string> = {};
       const trimmedName = name.trim();
       if (!trimmedName || trimmedName === 'Dr.') {
-        Alert.alert('Required Field', 'Please enter doctor full name.');
-        return;
+        newErrors.name = 'Please enter doctor full name.';
       }
       if (!doctorOption) {
-        Alert.alert('Doctor Option Required', 'Please select a Doctor Option / Designation.');
+        newErrors.doctorOption = 'Please select a Doctor Option / Designation.';
+      }
+      if (!specialization.trim()) {
+        newErrors.specialization = 'Please select primary medical specialization.';
+      }
+      if (!qualification.trim()) {
+        newErrors.qualification = 'Please enter degrees / qualifications.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
-      if (!specialization.trim() || !qualification.trim()) {
-        Alert.alert('Required Field', 'Please specify medical specialization and qualification.');
-        return;
-      }
+      setErrors({});
       setCurrentStep(2);
     } else if (currentStep === 2) {
+      const newErrors: Record<string, string> = {};
       if (!councilRegNumber.trim()) {
-        Alert.alert('License Required', 'Please enter Medical Council Registration number.');
+        newErrors.councilRegNumber = 'Please enter Medical Council Registration number.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      if (!phone.trim() || phone.trim().length < 10) {
-        Alert.alert('Invalid Phone', 'Please enter a valid 10-digit primary mobile number.');
-        return;
+      const newErrors: Record<string, string> = {};
+      const cleanPhone = phone.trim().replace(/\D/g, '');
+      if (!phone.trim()) {
+        newErrors.phone = 'Please enter primary mobile number.';
+      } else if (cleanPhone.length !== 10) {
+        newErrors.phone = 'Please enter a valid 10-digit primary mobile number.';
       }
       if (!clinicAddress.trim()) {
-        Alert.alert('Address Required', 'Please enter clinic or consultation chambers address.');
+        newErrors.clinicAddress = 'Please enter clinic or consultation chambers address.';
+      }
+      if (availableDays.length === 0) {
+        newErrors.availableDays = 'Doctor must have at least one consulting day.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       setCurrentStep(4);
     } else if (currentStep === 4) {
+      const newErrors: Record<string, string> = {};
       if (!uploadedDoc) {
-        Alert.alert('Document Required', 'Please upload Medical Council registration certificate.');
+        newErrors.uploadedDoc = 'Please upload Medical Council registration certificate.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       setCurrentStep(5);
     }
   };
 
   const handlePrevStep = () => {
+    setErrors({});
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
   const handleRegisterDoctor = () => {
-    const trimmedName = name.trim();
+    const newErrors: Record<string, string> = {};
+    if (!bankName.trim()) {
+      newErrors.bankName = 'Please enter designated bank name.';
+    }
+    if (!accountNumber.trim()) {
+      newErrors.accountNumber = 'Please enter bank account number.';
+    }
+    if (!ifscCode.trim()) {
+      newErrors.ifscCode = 'Please enter IFSC code.';
+    }
     if (!isDeclared) {
-      Alert.alert(
-        'Ethics Declaration Required',
-        'Please confirm adherence to Telemedicine Practice Guidelines and Medical Council ethics.',
-      );
+      newErrors.declaration = 'Please confirm adherence to Telemedicine Practice Guidelines and Medical Council ethics.';
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    setErrors({});
+    const trimmedName = name.trim();
 
     const selectedOptionObj = DOCTOR_PRACTICE_OPTIONS.find((o) => o.id === doctorOption);
 
@@ -307,12 +380,6 @@ export default function DoctorRegistrationScreen({
     switchProviderMode('doctor');
     setIsRegistered(true);
     onComplete?.();
-
-    Alert.alert(
-      'Doctor Registration Complete! 🩺',
-      `${trimmedName} is successfully registered as "${selectedOptionObj?.label}" with active ${medicalCouncil} verification.`,
-      [{ text: 'View Doctor Dashboard' }],
-    );
   };
 
   const ContainerComponent = embedded ? View : SafeAreaView;
@@ -326,25 +393,20 @@ export default function DoctorRegistrationScreen({
       <ContainerComponent {...(containerProps as any)}>
         {/* Doctor Dashboard Header */}
         <View style={styles.topHeader}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => setIsRegistered(false)}
-            accessibilityLabel="Edit Doctor Registration"
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="medkit" size={18} color="#60A5FA" />
-              <Text style={styles.headerTitle} numberOfLines={1}>{name}</Text>
+          <View style={styles.headerTitleContainer}>
+            <View style={styles.headerTitleRow}>
+              <Ionicons name="medkit" size={16} color="#60A5FA" />
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {name}
+              </Text>
             </View>
-            <Text style={styles.headerSubtitle}>
-              Registered Doctor Dashboard • {specialization} • Reg: {councilRegNumber}
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              Registered Doctor • {specialization} • Reg: {councilRegNumber}
             </Text>
           </View>
+
           <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={13} color="#FFFFFF" />
+            <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
             <Text style={styles.verifiedBadgeText}>VERIFIED</Text>
           </View>
         </View>
@@ -417,31 +479,46 @@ export default function DoctorRegistrationScreen({
           </Card>
 
           {/* Consultation Fee Metrics */}
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, { marginTop: spacing.md, marginBottom: spacing.xs }]}>
             <Ionicons name="cash-outline" size={17} color="#2563EB" />
             <Text style={styles.sectionTitle}>Consultation Fees & Practice Modalities</Text>
           </View>
 
           <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-              <Ionicons name="videocam" size={20} color="#2563EB" />
-              <Text style={styles.statNumber}>₹{onlineFee}</Text>
-              <Text style={styles.statLabel}>Video Consult</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#EFF6FF' }]}>
+                  <Ionicons name="videocam" size={19} color="#2563EB" />
+                </View>
+                <Text style={styles.statNumber}>₹{onlineFee}</Text>
+                <Text style={styles.statLabel}>Video Consult</Text>
+              </View>
+
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#F0FDFA' }]}>
+                  <Ionicons name="business" size={19} color="#0D9488" />
+                </View>
+                <Text style={styles.statNumber}>₹{consultationFee}</Text>
+                <Text style={styles.statLabel}>In-Clinic OPD</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Ionicons name="business" size={20} color="#0D9488" />
-              <Text style={styles.statNumber}>₹{consultationFee}</Text>
-              <Text style={styles.statLabel}>In-Clinic OPD</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Ionicons name="home" size={20} color="#D97706" />
-              <Text style={styles.statNumber}>₹{homeVisitFee}</Text>
-              <Text style={styles.statLabel}>Home Visit</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Ionicons name="time" size={20} color="#7C3AED" />
-              <Text style={styles.statNumber}>{slotDuration}m</Text>
-              <Text style={styles.statLabel}>Slot Duration</Text>
+
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="home" size={19} color="#D97706" />
+                </View>
+                <Text style={styles.statNumber}>₹{homeVisitFee}</Text>
+                <Text style={styles.statLabel}>Home Visit</Text>
+              </View>
+
+              <View style={styles.statBox}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#F3E8FF' }]}>
+                  <Ionicons name="time" size={19} color="#7C3AED" />
+                </View>
+                <Text style={styles.statNumber}>{slotDuration}m</Text>
+                <Text style={styles.statLabel}>Slot Duration</Text>
+              </View>
             </View>
           </View>
 
@@ -509,25 +586,31 @@ export default function DoctorRegistrationScreen({
 
           {/* Practice & Settlement Summary */}
           <Card style={styles.summaryCard} padding="md">
-            <Text style={styles.summaryCardHeading}>Practice Chambers & Bank Settlement</Text>
+            <View style={styles.summaryHeaderRow}>
+              <View style={[styles.summaryHeaderIconWrap, { backgroundColor: '#EFF6FF' }]}>
+                <Ionicons name="medical" size={16} color="#2563EB" />
+              </View>
+              <Text style={styles.summaryCardHeading}>Practice Chambers & Bank Settlement</Text>
+            </View>
+
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Clinic Name:</Text>
+              <Text style={styles.summaryLabel}>Clinic Name</Text>
               <Text style={styles.summaryValue}>{clinicName}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Clinic Address:</Text>
+              <Text style={styles.summaryLabel}>Clinic Address</Text>
               <Text style={styles.summaryValue}>{clinicAddress}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Schedule Days:</Text>
+              <Text style={styles.summaryLabel}>Schedule Days</Text>
               <Text style={styles.summaryValue}>{availableDays.join(', ')} ({timeStart} - {timeEnd})</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Contact Phone:</Text>
+              <Text style={styles.summaryLabel}>Contact Phone</Text>
               <Text style={styles.summaryValue}>+91 {phone}</Text>
             </View>
             <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.summaryLabel}>Settlement Bank:</Text>
+              <Text style={styles.summaryLabel}>Settlement Bank</Text>
               <Text style={styles.summaryValue}>{bankName} ••••{accountNumber.slice(-4)} ({ifscCode})</Text>
             </View>
           </Card>
@@ -656,12 +739,7 @@ export default function DoctorRegistrationScreen({
                     <Ionicons name="medkit" size={26} color="#2563EB" />
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.md }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.bannerTitle}>Doctor Practice Onboarding</Text>
-                      <View style={styles.doctorTag}>
-                        <Text style={styles.doctorTagText}>Category 2</Text>
-                      </View>
-                    </View>
+                    <Text style={styles.bannerTitle}>Doctor Practice Onboarding</Text>
                     <Text style={styles.bannerSubtitle}>
                       Register as a specialist consultant, family physician, or telemedicine expert with verified council credentials.
                     </Text>
@@ -704,6 +782,12 @@ export default function DoctorRegistrationScreen({
                     );
                   })}
                 </View>
+                {errors.doctorOption ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.doctorOption}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>
                   Practice Modality *
@@ -735,33 +819,77 @@ export default function DoctorRegistrationScreen({
               <Card style={styles.formCard} padding="lg">
                 <Text style={styles.inputLabel}>Doctor Full Name (with Prefix) *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.name && styles.inputError]}
                   value={name}
-                  onChangeText={setName}
-                  placeholder="e.g. Dr. Rajesh Sharma"
+                  onChangeText={(val) => {
+                    setName(val);
+                    clearError('name');
+                  }}
+                  placeholder="Enter doctor full name"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.name ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.name}</Text>
+                  </View>
+                ) : null}
 
-                <Text style={styles.inputLabel}>Select Doctor Profile Avatar</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.avatarScroll}>
-                  {DOCTOR_AVATAR_PRESETS.map((item, idx) => {
-                    const isSelected = photo === item.uri;
-                    return (
-                      <Pressable
-                        key={idx}
-                        style={[styles.avatarChoice, isSelected && styles.avatarChoiceSelected]}
-                        onPress={() => setPhoto(item.uri)}
-                      >
-                        <Image source={{ uri: item.uri }} style={styles.avatarImg} />
-                        {isSelected && (
-                          <View style={styles.avatarCheckmarkBadge}>
-                            <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                          </View>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
+                <Text style={styles.inputLabel}>Doctor Profile Photo / Avatar</Text>
+                <View style={styles.photoPickerContainer}>
+                  <View style={styles.photoPreviewSection}>
+                    <View style={styles.photoAvatarWrap}>
+                      <Image source={{ uri: photo }} style={styles.avatarPreview} />
+                    </View>
+                    {isCustomPhoto && (
+                      <View style={styles.customPhotoTag}>
+                        <Ionicons name="checkmark-circle" size={10} color="#15803D" />
+                        <Text style={styles.customPhotoTagText}>Custom Photo</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.photoActionsSection}>
+                    {/* 1. Doctor Avatar Presets (First) */}
+                    <Text style={styles.avatarPickerLabel}>Select Doctor Avatar:</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.presetsWrap}
+                    >
+                      {DOCTOR_AVATAR_PRESETS.map((preset, index) => {
+                        const isSelected = photo === preset.uri;
+                        return (
+                          <Pressable
+                            key={preset.id || index}
+                            style={[styles.avatarChoice, isSelected && styles.avatarChoiceSelected]}
+                            onPress={() => setPhoto(preset.uri)}
+                            accessibilityLabel={`Select Doctor Avatar ${index + 1}`}
+                          >
+                            <Image source={{ uri: preset.uri }} style={styles.avatarImg} />
+                            {isSelected && (
+                              <View style={styles.avatarCheckmarkBadge}>
+                                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                              </View>
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+
+                    {/* 2. Upload Photo Option (Second) */}
+                    <Text style={[styles.avatarPickerLabel, { marginTop: 10 }]}>Or Upload Photo:</Text>
+                    <Pressable
+                      style={styles.uploadPhotoBtn}
+                      onPress={handleUploadPhoto}
+                      accessibilityLabel="Upload doctor photo from phone"
+                    >
+                      <Ionicons name="cloud-upload-outline" size={15} color="#FFFFFF" />
+                      <Text style={styles.uploadPhotoBtnText}>Upload Photo</Text>
+                    </Pressable>
+                    <Text style={styles.photoHintText}>Pick custom photo from phone storage</Text>
+                  </View>
+                </View>
 
                 <Text style={styles.inputLabel}>Primary Medical Specialization *</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -780,17 +908,32 @@ export default function DoctorRegistrationScreen({
                     );
                   })}
                 </ScrollView>
+                {errors.specialization ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.specialization}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1.5, marginRight: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Degrees / Qualifications *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.qualification && styles.inputError]}
                       value={qualification}
-                      onChangeText={setQualification}
-                      placeholder="MBBS, MD (Medicine)"
+                      onChangeText={(val) => {
+                        setQualification(val);
+                        clearError('qualification');
+                      }}
+                      placeholder="Enter degrees / qualifications"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.qualification ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.qualification}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 0.8, marginLeft: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Exp (Years)</Text>
@@ -799,7 +942,7 @@ export default function DoctorRegistrationScreen({
                       value={experience}
                       onChangeText={setExperience}
                       keyboardType="number-pad"
-                      placeholder="12"
+                      placeholder="Enter experience in years"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -810,9 +953,9 @@ export default function DoctorRegistrationScreen({
               <Pressable
                 style={styles.primaryStepBtn}
                 onPress={handleNextStep}
-                accessibilityLabel="Continue to Step 2 Credentials"
+                accessibilityLabel="Next"
               >
-                <Text style={styles.primaryStepBtnText}>Continue to Step 2: Credentials</Text>
+                <Text style={styles.primaryStepBtnText}>Next</Text>
                 <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
               </Pressable>
             </>
@@ -831,12 +974,21 @@ export default function DoctorRegistrationScreen({
                   Medical Council Registration Number *
                 </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.councilRegNumber && styles.inputError]}
                   value={councilRegNumber}
-                  onChangeText={setCouncilRegNumber}
-                  placeholder="e.g. MCI-2019-84729"
+                  onChangeText={(val) => {
+                    setCouncilRegNumber(val);
+                    clearError('councilRegNumber');
+                  }}
+                  placeholder="Enter medical council registration number"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.councilRegNumber ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.councilRegNumber}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={styles.inputLabel}>Registering Medical Council *</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -864,7 +1016,7 @@ export default function DoctorRegistrationScreen({
                       value={councilRegYear}
                       onChangeText={setCouncilRegYear}
                       keyboardType="number-pad"
-                      placeholder="2014"
+                      placeholder="Enter year of registration"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -874,7 +1026,7 @@ export default function DoctorRegistrationScreen({
                       style={styles.textInput}
                       value={affiliatedHospital}
                       onChangeText={setAffiliatedHospital}
-                      placeholder="Metro Apex Hospital"
+                      placeholder="Enter affiliated hospital name"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -900,11 +1052,11 @@ export default function DoctorRegistrationScreen({
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Continue to Step 3 Schedule & Fees"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 3: Schedule & Fees</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -925,30 +1077,50 @@ export default function DoctorRegistrationScreen({
                   style={styles.textInput}
                   value={clinicName}
                   onChangeText={setClinicName}
-                  placeholder="Dr. Rajesh Sharma Cardiology Clinic"
+                  placeholder="Enter practice clinic name"
                   placeholderTextColor={colors.textMuted}
                 />
 
                 <Text style={styles.inputLabel}>Clinic Address *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.clinicAddress && styles.inputError]}
                   value={clinicAddress}
-                  onChangeText={setClinicAddress}
-                  placeholder="Suite 204, Meditech Plaza, Indiranagar, Bengaluru"
+                  onChangeText={(val) => {
+                    setClinicAddress(val);
+                    clearError('clinicAddress');
+                  }}
+                  placeholder="Enter clinic address"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.clinicAddress ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.clinicAddress}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1, marginRight: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Primary Mobile *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.phone && styles.inputError]}
                       value={phone}
-                      onChangeText={setPhone}
+                      onChangeText={(val) => {
+                        const digits = val.replace(/\D/g, '').slice(0, 10);
+                        setPhone(digits);
+                        clearError('phone');
+                      }}
                       keyboardType="phone-pad"
-                      placeholder="10-digit mobile"
+                      maxLength={10}
+                      placeholder="Enter 10-digit mobile number"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.phone ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.phone}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Doctor Email *</Text>
@@ -958,7 +1130,7 @@ export default function DoctorRegistrationScreen({
                       onChangeText={setEmail}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                      placeholder="dr.rajesh@health.com"
+                      placeholder="Enter doctor email address"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -973,7 +1145,7 @@ export default function DoctorRegistrationScreen({
                       value={consultationFee}
                       onChangeText={setConsultationFee}
                       keyboardType="number-pad"
-                      placeholder="750"
+                      placeholder="Enter clinic fee"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -984,7 +1156,7 @@ export default function DoctorRegistrationScreen({
                       value={onlineFee}
                       onChangeText={setOnlineFee}
                       keyboardType="number-pad"
-                      placeholder="600"
+                      placeholder="Enter video fee"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -995,7 +1167,7 @@ export default function DoctorRegistrationScreen({
                       value={homeVisitFee}
                       onChangeText={setHomeVisitFee}
                       keyboardType="number-pad"
-                      placeholder="1200"
+                      placeholder="Enter home visit fee"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -1021,6 +1193,12 @@ export default function DoctorRegistrationScreen({
                     );
                   })}
                 </View>
+                {errors.availableDays ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.availableDays}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -1029,7 +1207,7 @@ export default function DoctorRegistrationScreen({
                       style={styles.textInput}
                       value={timeStart}
                       onChangeText={setTimeStart}
-                      placeholder="09:00 AM"
+                      placeholder="Enter start time"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -1039,7 +1217,7 @@ export default function DoctorRegistrationScreen({
                       style={styles.textInput}
                       value={timeEnd}
                       onChangeText={setTimeEnd}
-                      placeholder="05:00 PM"
+                      placeholder="Enter end time"
                       placeholderTextColor={colors.textMuted}
                     />
                   </View>
@@ -1058,11 +1236,11 @@ export default function DoctorRegistrationScreen({
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Continue to Step 4 Document Upload"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 4: Upload Documents</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -1107,20 +1285,23 @@ export default function DoctorRegistrationScreen({
                   </View>
                   <Pressable
                     style={styles.uploadBtn}
-                    onPress={() => {
-                      Alert.alert('Upload Certificate', 'Select replacement Medical Council document.', [
-                        {
-                          text: 'Replace PDF',
-                          onPress: () =>
-                            setUploadedDoc(`Medical_Council_Reg_${Date.now().toString().slice(-4)}.pdf`),
-                        },
-                        { text: 'Cancel', style: 'cancel' },
-                      ]);
+                    onPress={async () => {
+                      const file = await pickDocumentOrImage();
+                      if (file) {
+                        setUploadedDoc(file.name);
+                        clearError('uploadedDoc');
+                      }
                     }}
                   >
                     <Text style={styles.uploadBtnText}>Replace</Text>
                   </Pressable>
                 </View>
+                {errors.uploadedDoc ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.uploadedDoc}</Text>
+                  </View>
+                ) : null}
 
                 <Text style={[styles.uploadSectionTitle, { marginTop: spacing.md }]}>
                   Postgraduate Degree / Specialization Certificate
@@ -1141,15 +1322,11 @@ export default function DoctorRegistrationScreen({
                   </View>
                   <Pressable
                     style={styles.uploadBtn}
-                    onPress={() => {
-                      Alert.alert('Upload Degree', 'Select replacement PG degree certificate.', [
-                        {
-                          text: 'Replace PDF',
-                          onPress: () =>
-                            setUploadedDegreeDoc(`PG_Degree_${Date.now().toString().slice(-4)}.pdf`),
-                        },
-                        { text: 'Cancel', style: 'cancel' },
-                      ]);
+                    onPress={async () => {
+                      const file = await pickDocumentOrImage();
+                      if (file) {
+                        setUploadedDegreeDoc(file.name);
+                      }
                     }}
                   >
                     <Text style={styles.uploadBtnText}>Replace</Text>
@@ -1165,15 +1342,15 @@ export default function DoctorRegistrationScreen({
                   accessibilityLabel="Back to Step 3"
                 >
                   <Ionicons name="arrow-back" size={16} color={colors.text} />
-                  <Text style={styles.secondaryStepBtnText}>Back to Step 3</Text>
+                  <Text style={styles.secondaryStepBtnText}>Back</Text>
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2 }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0 }]}
                   onPress={handleNextStep}
-                  accessibilityLabel="Continue to Step 5 Bank & Ethics"
+                  accessibilityLabel="Next"
                 >
-                  <Text style={styles.primaryStepBtnText}>Step 5: Bank & Ethics</Text>
+                  <Text style={styles.primaryStepBtnText}>Next</Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -1191,35 +1368,62 @@ export default function DoctorRegistrationScreen({
               <Card style={styles.formCard} padding="lg">
                 <Text style={styles.inputLabel}>Payout Bank Name *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, errors.bankName && styles.inputError]}
                   value={bankName}
-                  onChangeText={setBankName}
-                  placeholder="e.g. ICICI Bank, HDFC Bank, SBI"
+                  onChangeText={(val) => {
+                    setBankName(val);
+                    clearError('bankName');
+                  }}
+                  placeholder="Enter bank name"
                   placeholderTextColor={colors.textMuted}
                 />
+                {errors.bankName ? (
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                    <Text style={styles.errorText}>{errors.bankName}</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.inputRow}>
                   <View style={{ flex: 1.4, marginRight: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>Account Number *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.accountNumber && styles.inputError]}
                       value={accountNumber}
-                      onChangeText={setAccountNumber}
+                      onChangeText={(val) => {
+                        setAccountNumber(val);
+                        clearError('accountNumber');
+                      }}
                       keyboardType="number-pad"
-                      placeholder="Account number"
+                      placeholder="Enter account number"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.accountNumber ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.accountNumber}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1, marginLeft: spacing.sm }}>
                     <Text style={styles.inputLabel} numberOfLines={1}>IFSC Code *</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, errors.ifscCode && styles.inputError]}
                       value={ifscCode}
-                      onChangeText={setIfscCode}
+                      onChangeText={(val) => {
+                        setIfscCode(val);
+                        clearError('ifscCode');
+                      }}
                       autoCapitalize="characters"
-                      placeholder="ICIC0000021"
+                      placeholder="Enter IFSC code"
                       placeholderTextColor={colors.textMuted}
                     />
+                    {errors.ifscCode ? (
+                      <View style={styles.errorRow}>
+                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                        <Text style={styles.errorText}>{errors.ifscCode}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
 
@@ -1229,7 +1433,7 @@ export default function DoctorRegistrationScreen({
                   value={upiId}
                   onChangeText={setUpiId}
                   autoCapitalize="none"
-                  placeholder="dr.rajesh@upi"
+                  placeholder="Enter doctor UPI ID"
                   placeholderTextColor={colors.textMuted}
                 />
               </Card>
@@ -1238,7 +1442,10 @@ export default function DoctorRegistrationScreen({
               <Card style={styles.declarationCard} padding="md">
                 <Pressable
                   style={styles.checkboxRow}
-                  onPress={() => setIsDeclared(!isDeclared)}
+                  onPress={() => {
+                    setIsDeclared(!isDeclared);
+                    clearError('declaration');
+                  }}
                   accessibilityLabel="Agree to Medical Ethics"
                 >
                   <View
@@ -1257,6 +1464,12 @@ export default function DoctorRegistrationScreen({
                   </Text>
                 </Pressable>
               </Card>
+              {errors.declaration ? (
+                <View style={styles.errorRow}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.declaration}</Text>
+                </View>
+              ) : null}
 
               {/* Final Step Actions */}
               <View style={styles.stepBtnRow}>
@@ -1266,16 +1479,16 @@ export default function DoctorRegistrationScreen({
                   accessibilityLabel="Back to Step 4 Documents"
                 >
                   <Ionicons name="arrow-back" size={16} color={colors.text} />
-                  <Text style={styles.secondaryStepBtnText}>Back to Step 4</Text>
+                  <Text style={styles.secondaryStepBtnText}>Back</Text>
                 </Pressable>
 
                 <Pressable
-                  style={[styles.primaryStepBtn, { flex: 2, backgroundColor: '#2563EB' }]}
+                  style={[styles.primaryStepBtn, { flex: 1, marginTop: 0, backgroundColor: '#2563EB' }]}
                   onPress={handleRegisterDoctor}
                   accessibilityLabel="Complete Doctor Registration"
                 >
                   <Ionicons name="medkit" size={18} color="#FFFFFF" />
-                  <Text style={styles.primaryStepBtnText}>Complete & Open Dashboard</Text>
+                  <Text style={styles.primaryStepBtnText} numberOfLines={1}>Complete</Text>
                 </Pressable>
               </View>
             </>
@@ -1294,12 +1507,13 @@ const styles = StyleSheet.create({
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
     minHeight: 56,
     backgroundColor: '#0F172A',
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
+    gap: 8,
   },
   backBtn: {
     width: 36,
@@ -1310,10 +1524,20 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginRight: 6,
+    justifyContent: 'center',
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   headerTitle: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -1341,11 +1565,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radius.full,
+    flexShrink: 0,
+    alignSelf: 'center',
   },
   verifiedBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   progressTrackerContainer: {
     backgroundColor: '#FFFFFF',
@@ -1566,34 +1793,130 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  avatarScroll: {
-    marginVertical: 6,
+  photoPickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: spacing.md,
+  },
+  photoPreviewSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoAvatarWrap: {
+    position: 'relative',
+    width: 68,
+    height: 68,
+  },
+  avatarPreview: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: colors.borderLight,
+  },
+  photoCameraOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    elevation: 3,
+  },
+  customPhotoTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 6,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  customPhotoTagText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  photoActionsSection: {
+    flex: 1,
+  },
+  uploadPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  uploadPhotoBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  photoHintText: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 3,
+    marginBottom: 8,
+  },
+  avatarPickerLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  presetsWrap: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    paddingVertical: 2,
   },
   avatarChoice: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    marginRight: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 6,
     borderWidth: 2,
     borderColor: '#CBD5E1',
     position: 'relative',
+    backgroundColor: '#FFFFFF',
   },
   avatarChoiceSelected: {
-    borderColor: '#2563EB',
+    borderColor: colors.primary,
   },
   avatarImg: {
     width: '100%',
     height: '100%',
-    borderRadius: 24,
+    borderRadius: 20,
   },
   avatarCheckmarkBadge: {
     position: 'absolute',
     bottom: -2,
     right: -2,
-    backgroundColor: '#2563EB',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    backgroundColor: colors.primary,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1770,6 +2093,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   secondaryStepBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1778,11 +2102,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CBD5E1',
     paddingVertical: 14,
-    paddingHorizontal: 16,
     borderRadius: radius.md,
   },
   secondaryStepBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: '#334155',
   },
@@ -1872,33 +2195,50 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   statsGrid: {
+    gap: 10,
+  },
+  statsRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'stretch',
+    gap: 10,
   },
   statBox: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: radius.md,
-    paddingVertical: 12,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
+    minHeight: 105,
+  },
+  statIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
   statNumber: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0F172A',
-    marginTop: 4,
+    textAlign: 'center',
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '600',
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 3,
+    textAlign: 'center',
   },
   actionGrid: {
     flexDirection: 'row',
@@ -1953,31 +2293,66 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderWidth: 1,
     borderRadius: radius.lg,
+    marginTop: spacing.md,
+  },
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.xs,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  summaryHeaderIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   summaryCardHeading: {
     fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: spacing.xs,
   },
   summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
+    alignItems: 'flex-start',
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 8,
+    borderBottomColor: '#F1F5F9',
+    gap: 12,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '600',
     color: '#64748B',
-    minWidth: 100,
+    width: 110,
+    lineHeight: 18,
   },
   summaryValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#0F172A',
     flex: 1,
-    textAlign: 'right',
+    textAlign: 'left',
+    lineHeight: 18,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '600',
   },
 });

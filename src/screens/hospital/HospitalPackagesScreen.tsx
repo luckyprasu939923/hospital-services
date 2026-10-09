@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
   Image,
   Modal,
@@ -33,7 +32,6 @@ export default function HospitalPackagesScreen() {
 
   const handleCreate = () => {
     if (!title.trim()) {
-      Alert.alert('Required', 'Please enter a package title.');
       return;
     }
 
@@ -48,10 +46,6 @@ export default function HospitalPackagesScreen() {
     });
 
     setModalVisible(false);
-    Alert.alert(
-      'Package Submitted',
-      'Package created! It will appear on the One Buddy customer home page once approved by the admin team.',
-    );
   };
 
   const renderPackageItem = ({ item }: { item: HealthPackage }) => {

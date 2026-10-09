@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -209,7 +208,6 @@ export default function BookingsOrdersScreen() {
                 style={[styles.actionBtn, { backgroundColor: colors.primary }]}
                 onPress={() => {
                   acceptOPBooking(item.id);
-                  Alert.alert('Booking Accepted', `Notified ${item.patientName} on WhatsApp & Email.`);
                 }}
               >
                 <Ionicons name="checkmark" size={14} color="#FFFFFF" />
@@ -230,21 +228,7 @@ export default function BookingsOrdersScreen() {
               <Pressable
                 style={[styles.actionBtn, { backgroundColor: colors.danger }]}
                 onPress={() => {
-                  Alert.alert(
-                    'Cancel Booking',
-                    `Are you sure you want to cancel the booking for ${item.patientName}?`,
-                    [
-                      { text: 'No' },
-                      {
-                        text: 'Yes, Cancel',
-                        style: 'destructive',
-                        onPress: () => {
-                          cancelOPBooking(item.id, 'Doctor unavailable on requested slot');
-                          Alert.alert('Booking Cancelled', 'Patient has been notified with refund details.');
-                        },
-                      },
-                    ],
-                  );
+                  cancelOPBooking(item.id, 'Doctor unavailable on requested slot');
                 }}
               >
                 <Ionicons name="close" size={14} color="#FFFFFF" />
@@ -259,7 +243,6 @@ export default function BookingsOrdersScreen() {
                 style={[styles.actionBtn, { backgroundColor: colors.info }]}
                 onPress={() => {
                   updateOPStatus(item.id, 'checked_in');
-                  Alert.alert('Patient Checked-in', `${item.patientName} marked present at hospital OP desk.`);
                 }}
               >
                 <Ionicons name="enter-outline" size={14} color="#FFFFFF" />
@@ -270,7 +253,6 @@ export default function BookingsOrdersScreen() {
                 style={[styles.actionBtn, { backgroundColor: colors.warning }]}
                 onPress={() => {
                   updateOPStatus(item.id, 'no_show');
-                  Alert.alert('Marked No-show', `${item.patientName} was not present during slot.`);
                 }}
               >
                 <Ionicons name="alert-circle-outline" size={14} color="#FFFFFF" />
@@ -284,7 +266,6 @@ export default function BookingsOrdersScreen() {
               style={[styles.actionBtn, { backgroundColor: colors.success }]}
               onPress={() => {
                 updateOPStatus(item.id, 'completed');
-                Alert.alert('Consultation Completed', `Payout of ₹${item.netPayout} moved to eligible settlements.`);
               }}
             >
               <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
@@ -455,7 +436,6 @@ export default function BookingsOrdersScreen() {
                   style={styles.noShowSecondaryBtn}
                   onPress={() => {
                     updateConsultationStatus(item.id, 'no_show');
-                    Alert.alert('Marked No-show', 'Patient did not attend online video call.');
                   }}
                   accessibilityLabel="Mark Patient No-show"
                 >
@@ -574,12 +554,6 @@ export default function BookingsOrdersScreen() {
           </View>
           <Pressable
             style={styles.navMapBtn}
-            onPress={() => {
-              Alert.alert(
-                'Open Map Navigation',
-                `Launching turn-by-turn navigation to: ${item.address} (approx ${item.distanceKm} km)`,
-              );
-            }}
             hitSlop={6}
           >
             <Ionicons name="navigate" size={13} color="#FFFFFF" />
@@ -634,10 +608,6 @@ export default function BookingsOrdersScreen() {
                 style={[styles.homeVisitActionBtn, { backgroundColor: colors.success }]}
                 onPress={() => {
                   acceptHomeVisit(item.id);
-                  Alert.alert(
-                    'Home Visit Accepted',
-                    `Your contact number and ETA have been shared with ${item.patientName}.`,
-                  );
                 }}
               >
                 <Ionicons name="checkmark-circle" size={15} color="#FFFFFF" />
@@ -648,7 +618,6 @@ export default function BookingsOrdersScreen() {
                 style={[styles.homeVisitActionBtn, { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FCA5A5' }]}
                 onPress={() => {
                   declineHomeVisit(item.id);
-                  Alert.alert('Visit Declined', 'The request has been returned to dispatch.');
                 }}
               >
                 <Ionicons name="close-circle" size={15} color={colors.danger} />
@@ -662,7 +631,6 @@ export default function BookingsOrdersScreen() {
               style={[styles.homeVisitFullBtn, { backgroundColor: colors.info }]}
               onPress={() => {
                 updateHomeVisitStatus(item.id, 'on_the_way');
-                Alert.alert('Status Updated', 'Patient notified: Doctor is ON THE WAY.');
               }}
             >
               <Ionicons name="bicycle" size={16} color="#FFFFFF" />
@@ -675,7 +643,6 @@ export default function BookingsOrdersScreen() {
               style={[styles.homeVisitFullBtn, { backgroundColor: colors.purple }]}
               onPress={() => {
                 updateHomeVisitStatus(item.id, 'reached');
-                Alert.alert('Status Updated', 'Patient notified: Doctor has REACHED the doorstep.');
               }}
             >
               <Ionicons name="location" size={16} color="#FFFFFF" />
@@ -691,10 +658,6 @@ export default function BookingsOrdersScreen() {
                   item.id,
                   'completed',
                   'Vitals normal. Administered prescribed analgesics. Rest advised for 48 hrs.',
-                );
-                Alert.alert(
-                  'Visit Completed',
-                  'Prescription & Visit Notes recorded and dispatched to patient via WhatsApp.',
                 );
               }}
             >
@@ -811,7 +774,6 @@ export default function BookingsOrdersScreen() {
                   style={[styles.smallVerifBtn, { backgroundColor: colors.success }]}
                   onPress={() => {
                     verifyPrescription(item.id, 'approved');
-                    Alert.alert('Prescription Verified', 'Order approved for packing and dispatch.');
                   }}
                 >
                   <Text style={styles.smallVerifBtnText}>Approve</Text>
@@ -897,7 +859,6 @@ export default function BookingsOrdersScreen() {
               style={[styles.actionBtn, { backgroundColor: colors.pharmacyTeal }]}
               onPress={() => {
                 updateOrderStatus(item.id, 'accepted');
-                Alert.alert('Order Accepted', 'Customer notified that order is accepted.');
               }}
             >
               <Ionicons name="checkmark" size={14} color="#FFFFFF" />
@@ -910,7 +871,6 @@ export default function BookingsOrdersScreen() {
               style={[styles.actionBtn, { backgroundColor: colors.purple }]}
               onPress={() => {
                 updateOrderStatus(item.id, 'packed');
-                Alert.alert('Order Packed', 'Medicines bagged with invoice. Ready for pickup.');
               }}
             >
               <Ionicons name="cube-outline" size={14} color="#FFFFFF" />
@@ -923,7 +883,6 @@ export default function BookingsOrdersScreen() {
               style={[styles.actionBtn, { backgroundColor: colors.info }]}
               onPress={() => {
                 updateOrderStatus(item.id, 'out_for_delivery');
-                Alert.alert('Out For Delivery', 'Delivery partner dispatched with package.');
               }}
             >
               <Ionicons name="bicycle-outline" size={14} color="#FFFFFF" />
@@ -936,7 +895,6 @@ export default function BookingsOrdersScreen() {
               style={[styles.actionBtn, { backgroundColor: colors.success }]}
               onPress={() => {
                 updateOrderStatus(item.id, 'delivered');
-                Alert.alert('Order Delivered', `Payout of ₹${item.netPayout} added to settlements.`);
               }}
             >
               <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
@@ -1206,10 +1164,6 @@ export default function BookingsOrdersScreen() {
                   if (selectedBookingForReschedule) {
                     rescheduleOPBooking(selectedBookingForReschedule.id, rescheduleDate, rescheduleSlot);
                     setRescheduleModalVisible(false);
-                    Alert.alert(
-                      'Appointment Rescheduled',
-                      `Patient ${selectedBookingForReschedule.patientName} moved to ${rescheduleDate} at ${rescheduleSlot}. Notification dispatched.`,
-                    );
                   }
                 }}
               >
@@ -1259,7 +1213,6 @@ export default function BookingsOrdersScreen() {
                   if (rejectOrderId) {
                     verifyPrescription(rejectOrderId, 'rejected', rejectReason);
                     setRejectRxModalVisible(false);
-                    Alert.alert('Prescription Rejected', 'Customer notified with reason to re-upload.');
                   }
                 }}
               >
@@ -1312,10 +1265,6 @@ export default function BookingsOrdersScreen() {
                   if (substOrderId && substProductId && suggestedBrand.trim()) {
                     suggestSubstitution(substOrderId, substProductId, suggestedBrand);
                     setSubstitutionModalVisible(false);
-                    Alert.alert(
-                      'Substitution Proposed',
-                      `Customer notified to approve substitution: ${suggestedBrand}`,
-                    );
                   }
                 }}
               >
@@ -1363,7 +1312,6 @@ export default function BookingsOrdersScreen() {
                   if (etaOrderId && !isNaN(mins)) {
                     setOrderEta(etaOrderId, mins);
                     setEtaModalVisible(false);
-                    Alert.alert('ETA Updated', `Delivery ETA set to ${mins} minutes.`);
                   }
                 }}
               >
@@ -1484,10 +1432,6 @@ export default function BookingsOrdersScreen() {
                         ],
                       });
                       setRxModalVisible(false);
-                      Alert.alert(
-                        'Prescription Sent Successfully',
-                        `Dispatched to ${selectedConsultationForRx.patientName} via One Buddy App, Email, and WhatsApp.`,
-                      );
                     }
                   }}
                 >

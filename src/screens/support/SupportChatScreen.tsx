@@ -35,6 +35,9 @@ export default function SupportChatScreen() {
     if (!chatInput.trim()) return;
     sendChatMessage(chatInput.trim());
     setChatInput('');
+    if (activeTab !== 'chat') {
+      setActiveTab('chat');
+    }
   };
 
   return (
@@ -89,151 +92,169 @@ export default function SupportChatScreen() {
         </Pressable>
       </View>
 
-      {/* Tab 1: Live Chat (Primary & Instantly Accessible) */}
-      {activeTab === 'chat' && (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
-          style={{ flex: 1 }}
-        >
-          {/* Live Status Bar */}
-          <View style={styles.chatStatusBar}>
-            <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
-            <Text style={styles.chatStatusBarText}>
-              Connected with Medical Partner Concierge • Typical reply time: Instant
-            </Text>
-          </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+        style={styles.containerWrap}
+      >
+        {/* Main Tab Area */}
+        <View style={styles.tabContentArea}>
+          {activeTab === 'chat' ? (
+            <View style={{ flex: 1 }}>
+              {/* Live Status Bar */}
+              <View style={styles.chatStatusBar}>
+                <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+                <Text style={styles.chatStatusBarText}>
+                  Connected with Medical Partner Concierge • Typical reply time: Instant
+                </Text>
+              </View>
 
-          <FlatList
-            data={chatMessages}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.chatListContent}
-            renderItem={({ item }) => {
-              const isMe = item.sender === 'user';
-              return (
-                <View
-                  style={[
-                    styles.chatBubbleWrap,
-                    isMe ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.chatBubble,
-                      isMe
-                        ? { backgroundColor: colors.primary, borderBottomRightRadius: 2 }
-                        : { backgroundColor: colors.card, borderBottomLeftRadius: 2, borderWidth: 1, borderColor: colors.borderLight },
-                    ]}
-                  >
-                    <Text
+              <FlatList
+                style={{ flex: 1 }}
+                data={chatMessages}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.chatListContent}
+                renderItem={({ item }) => {
+                  const isMe = item.sender === 'user';
+                  return (
+                    <View
                       style={[
-                        styles.chatText,
-                        isMe ? { color: '#FFFFFF' } : { color: colors.text },
+                        styles.chatBubbleWrap,
+                        isMe ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' },
                       ]}
                     >
-                      {item.text}
-                    </Text>
-                  </View>
-                  <Text style={styles.chatTime}>{item.timestamp}</Text>
+                      <View
+                        style={[
+                          styles.chatBubble,
+                          isMe
+                            ? { backgroundColor: colors.primary, borderBottomRightRadius: 2 }
+                            : { backgroundColor: colors.card, borderBottomLeftRadius: 2, borderWidth: 1, borderColor: colors.borderLight },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.chatText,
+                            isMe ? { color: '#FFFFFF' } : { color: colors.text },
+                          ]}
+                        >
+                          {item.text}
+                        </Text>
+                      </View>
+                      <Text style={styles.chatTime}>{item.timestamp}</Text>
+                    </View>
+                  );
+                }}
+              />
+            </View>
+          ) : (
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.faqContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Top Quick Chat Banner */}
+              <Pressable
+                style={styles.topChatBanner}
+                onPress={() => setActiveTab('chat')}
+                accessibilityLabel="Start Live Chat"
+              >
+                <View style={styles.topChatBannerIcon}>
+                  <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
                 </View>
-              );
-            }}
-          />
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.topChatBannerTitle}>Live Healthcare Concierge</Text>
+                    <View style={styles.liveDotPill}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveDotText}>LIVE NOW</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.topChatBannerSub}>
+                    Instant support for bookings, Rx verification & partner tools
+                  </Text>
+                </View>
+                <View style={styles.topChatActionBtn}>
+                  <Text style={styles.topChatActionText}>Chat</Text>
+                  <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+                </View>
+              </Pressable>
 
-          {/* Bottom Chat Input Bar with Safe Area Insets */}
-          <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+              <View style={styles.faqHeroBox}>
+                <Ionicons name="sparkles" size={18} color={colors.primary} />
+                <Text style={styles.faqHeroText}>
+                  Find quick answers to common questions about payouts, OP slot locking, digital prescriptions, and medicine delivery verification.
+                </Text>
+              </View>
+
+              {faqs.map((faq) => {
+                const isExpanded = expandedFaqId === faq.id;
+                return (
+                  <Card key={faq.id} style={styles.faqCard}>
+                    <Pressable
+                      style={styles.faqQuestionRow}
+                      onPress={() => setExpandedFaqId(isExpanded ? null : faq.id)}
+                    >
+                      <View style={styles.faqIconPill}>
+                        <Text style={styles.faqIconPillText}>{faq.category.slice(0, 3).toUpperCase()}</Text>
+                      </View>
+                      <Text style={styles.faqQuestionText}>{faq.question}</Text>
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color={colors.textSecondary}
+                      />
+                    </Pressable>
+
+                    {isExpanded && (
+                      <View style={styles.faqAnswerBox}>
+                        <Text style={styles.faqAnswerText}>{faq.answer}</Text>
+                      </View>
+                    )}
+                  </Card>
+                );
+              })}
+
+              <View style={styles.needMoreHelpCard}>
+                <Text style={styles.needMoreHelpTitle}>Still have questions?</Text>
+                <Text style={styles.needMoreHelpSub}>
+                  Talk with our 24/7 dedicated partner operations concierge.
+                </Text>
+                <Pressable style={styles.openChatBtn} onPress={() => setActiveTab('chat')}>
+                  <Ionicons name="chatbubbles" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.openChatBtnText}>Open Live Chat</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          )}
+        </View>
+
+        {/* ALWAYS VISIBLE BOTTOM TYPING BAR */}
+        <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={styles.inputFieldContainer}>
+            <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} style={{ marginRight: 8 }} />
             <TextInput
               style={styles.chatTextInput}
-              placeholder="Ask about bookings, slots, orders..."
+              placeholder={
+                activeTab === 'chat'
+                  ? 'Ask about bookings, slots, orders, Rx...'
+                  : 'Ask Live Concierge a question...'
+              }
               placeholderTextColor={colors.textMuted}
               value={chatInput}
               onChangeText={setChatInput}
               onSubmitEditing={handleSend}
+              returnKeyType="send"
             />
-            <Pressable style={styles.sendBtn} onPress={handleSend} accessibilityLabel="Send Message">
-              <Ionicons name="send" size={16} color="#FFFFFF" />
-            </Pressable>
           </View>
-        </KeyboardAvoidingView>
-      )}
-
-      {/* Tab 2: FAQs */}
-      {activeTab === 'faqs' && (
-        <ScrollView contentContainerStyle={styles.faqContent} showsVerticalScrollIndicator={false}>
-          {/* Top Quick Chat Banner - Chat Never Hidden at Bottom! */}
           <Pressable
-            style={styles.topChatBanner}
-            onPress={() => setActiveTab('chat')}
-            accessibilityLabel="Start Live Chat"
+            style={[styles.sendBtn, !chatInput.trim() && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            accessibilityLabel="Send Message"
           >
-            <View style={styles.topChatBannerIcon}>
-              <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.topChatBannerTitle}>Live Healthcare Concierge</Text>
-                <View style={styles.liveDotPill}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveDotText}>LIVE NOW</Text>
-                </View>
-              </View>
-              <Text style={styles.topChatBannerSub}>
-                Instant support for bookings, Rx verification & partner tools
-              </Text>
-            </View>
-            <View style={styles.topChatActionBtn}>
-              <Text style={styles.topChatActionText}>Chat</Text>
-              <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
-            </View>
+            <Ionicons name="send" size={16} color="#FFFFFF" />
           </Pressable>
-
-          <View style={styles.faqHeroBox}>
-            <Ionicons name="sparkles" size={18} color={colors.primary} />
-            <Text style={styles.faqHeroText}>
-              Find quick answers to common questions about payouts, OP slot locking, digital prescriptions, and medicine delivery verification.
-            </Text>
-          </View>
-
-          {faqs.map((faq) => {
-            const isExpanded = expandedFaqId === faq.id;
-            return (
-              <Card key={faq.id} style={styles.faqCard}>
-                <Pressable
-                  style={styles.faqQuestionRow}
-                  onPress={() => setExpandedFaqId(isExpanded ? null : faq.id)}
-                >
-                  <View style={styles.faqIconPill}>
-                    <Text style={styles.faqIconPillText}>{faq.category.slice(0, 3).toUpperCase()}</Text>
-                  </View>
-                  <Text style={styles.faqQuestionText}>{faq.question}</Text>
-                  <Ionicons
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                </Pressable>
-
-                {isExpanded && (
-                  <View style={styles.faqAnswerBox}>
-                    <Text style={styles.faqAnswerText}>{faq.answer}</Text>
-                  </View>
-                )}
-              </Card>
-            );
-          })}
-
-          <View style={styles.needMoreHelpCard}>
-            <Text style={styles.needMoreHelpTitle}>Still have questions?</Text>
-            <Text style={styles.needMoreHelpSub}>
-              Talk with our 24/7 dedicated partner operations concierge.
-            </Text>
-            <Pressable style={styles.openChatBtn} onPress={() => setActiveTab('chat')}>
-              <Ionicons name="chatbubbles" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.openChatBtnText}>Open Live Chat</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      )}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -506,33 +527,61 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginHorizontal: 4,
   },
+  containerWrap: {
+    flex: 1,
+  },
+  tabContentArea: {
+    flex: 1,
+  },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.md,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
+    borderTopColor: '#E2E8F0',
     gap: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  inputFieldContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    height: 44,
   },
   chatTextInput: {
     flex: 1,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
     fontSize: 13,
     color: colors.text,
+    paddingVertical: 0,
+    height: '100%',
   },
   sendBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  sendBtnDisabled: {
+    backgroundColor: '#94A3B8',
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

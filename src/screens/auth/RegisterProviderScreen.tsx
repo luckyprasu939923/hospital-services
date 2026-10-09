@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -19,6 +18,7 @@ import Card from '../../components/Card';
 import { RootStackParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
 import { ProviderType } from '../../types';
+import { pickDocumentOrImage } from '../../utils/filePicker';
 
 type RegisterProviderRouteProp = RouteProp<RootStackParamList, 'RegisterProvider'>;
 
@@ -111,11 +111,24 @@ export default function RegisterProviderScreen() {
   const [uploadedDoc, setUploadedDoc] = useState('Regulatory_License_Certificate.pdf');
   const [isAgreed, setIsAgreed] = useState(true);
 
+  // Field inline error validation states
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const activeRoleConfig =
     PROVIDER_ROLES.find((r) => r.id === selectedRole) || PROVIDER_ROLES[0];
 
   const handleRoleSelect = (role: ProviderType) => {
     setSelectedRole(role);
+    setErrors({});
     if (role === 'hospital') {
       setFacilityName('Metro Apex Multi-Specialty Hospital');
     } else if (role === 'doctor') {
@@ -126,19 +139,19 @@ export default function RegisterProviderScreen() {
   };
 
   const handleRegister = () => {
+    const newErrors: Record<string, string> = {};
+
     if (!facilityName.trim()) {
-      Alert.alert('Required Field', 'Please enter your organization / facility name.');
-      return;
+      newErrors.facilityName = 'Please enter your organization / facility name.';
     }
 
-    if (!phone.trim() || phone.trim().length < 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit primary mobile number.');
-      return;
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+    if (!phone.trim() || cleanPhone.length !== 10) {
+      newErrors.phone = 'Please enter a valid 10-digit primary mobile number.';
     }
 
     if (!email.trim() || !email.includes('@')) {
-      Alert.alert('Invalid Email', 'Please enter a valid official email address.');
-      return;
+      newErrors.email = 'Please enter a valid official email address.';
     }
 
     // Role-specific license validation
@@ -147,31 +160,33 @@ export default function RegisterProviderScreen() {
 
     if (selectedRole === 'hospital') {
       if (!hospitalLicense.trim()) {
-        Alert.alert('License Required', 'Please enter Clinical Establishment Act registration number.');
-        return;
+        newErrors.hospitalLicense = 'Please enter Clinical Establishment Act registration number.';
       }
       finalLicense = hospitalLicense.trim();
       finalLicenseType = 'Clinical Establishment Act License (CEA)';
     } else if (selectedRole === 'doctor') {
       if (!doctorCouncilNumber.trim()) {
-        Alert.alert('License Required', 'Please enter Medical Council (MCI / SMC) registration number.');
-        return;
+        newErrors.doctorCouncilNumber = 'Please enter Medical Council (MCI / SMC) registration number.';
       }
       finalLicense = doctorCouncilNumber.trim();
       finalLicenseType = 'State Medical Council / National Medical Commission (NMC)';
     } else {
       if (!drugLicenseNumber.trim()) {
-        Alert.alert('License Required', 'Please enter State Drug Retail License number (Form 20/21).');
-        return;
+        newErrors.drugLicenseNumber = 'Please enter State Drug Retail License number (Form 20/21).';
       }
       finalLicense = drugLicenseNumber.trim();
       finalLicenseType = 'State Drugs Control Department (Form 20 & 21)';
     }
 
     if (!isAgreed) {
-      Alert.alert('Terms Agreement', 'Please confirm adherence to OneBuddy healthcare quality standards.');
+      newErrors.isAgreed = 'Please confirm adherence to OneBuddy healthcare quality standards.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    setErrors({});
 
     // Save provider into context
     registerProvider({
@@ -193,21 +208,10 @@ export default function RegisterProviderScreen() {
 
     switchProviderMode(selectedRole);
 
-    Alert.alert(
-      'Registration Successful! 🎉',
-      `Welcome ${facilityName}! Your provider account under "${activeRoleConfig.title}" is now verified and active.`,
-      [
-        {
-          text: 'Go to Dashboard',
-          onPress: () => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Main' }],
-            });
-          },
-        },
-      ],
-    );
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Main' }],
+    });
   };
 
   return (
@@ -360,12 +364,21 @@ export default function RegisterProviderScreen() {
               : 'Pharmacy / Drugstore Name *'}
           </Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, errors.facilityName && styles.inputError]}
             value={facilityName}
-            onChangeText={setFacilityName}
-            placeholder="Official Facility Name"
+            onChangeText={(val) => {
+              setFacilityName(val);
+              clearError('facilityName');
+            }}
+            placeholder="Enter official facility name"
             placeholderTextColor={colors.textMuted}
           />
+          {errors.facilityName ? (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle" size={14} color="#EF4444" />
+              <Text style={styles.errorText}>{errors.facilityName}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.inputRow}>
             <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -374,40 +387,60 @@ export default function RegisterProviderScreen() {
                 style={styles.textInput}
                 value={contactPerson}
                 onChangeText={setContactPerson}
-                placeholder="Name"
+                placeholder="Enter contact person name"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
             <View style={{ flex: 1, marginLeft: spacing.sm }}>
               <Text style={styles.inputLabel}>Mobile Phone *</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, errors.phone && styles.inputError]}
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={(val) => {
+                  const digits = val.replace(/\D/g, '').slice(0, 10);
+                  setPhone(digits);
+                  clearError('phone');
+                }}
                 keyboardType="phone-pad"
-                placeholder="10 digit number"
+                maxLength={10}
+                placeholder="Enter 10-digit mobile number"
                 placeholderTextColor={colors.textMuted}
               />
+              {errors.phone ? (
+                <View style={styles.errorRow}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.phone}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
 
           <Text style={styles.inputLabel}>Official Email Address *</Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, errors.email && styles.inputError]}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(val) => {
+              setEmail(val);
+              clearError('email');
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
-            placeholder="contact@domain.com"
+            placeholder="Enter official email address"
             placeholderTextColor={colors.textMuted}
           />
+          {errors.email ? (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle" size={14} color="#EF4444" />
+              <Text style={styles.errorText}>{errors.email}</Text>
+            </View>
+          ) : null}
 
           <Text style={styles.inputLabel}>Street Address / Landmark</Text>
           <TextInput
             style={styles.textInput}
             value={address}
             onChangeText={setAddress}
-            placeholder="Premises / Street / Area"
+            placeholder="Enter street address and premises"
             placeholderTextColor={colors.textMuted}
           />
 
@@ -418,7 +451,7 @@ export default function RegisterProviderScreen() {
                 style={styles.textInput}
                 value={city}
                 onChangeText={setCity}
-                placeholder="City"
+                placeholder="Enter city"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -430,7 +463,7 @@ export default function RegisterProviderScreen() {
                 onChangeText={setPincode}
                 keyboardType="number-pad"
                 maxLength={6}
-                placeholder="560034"
+                placeholder="Enter 6-digit PIN code"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -452,12 +485,21 @@ export default function RegisterProviderScreen() {
                 Clinical Establishment Act Registration (CEA) No. *
               </Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, errors.hospitalLicense && styles.inputError]}
                 value={hospitalLicense}
-                onChangeText={setHospitalLicense}
-                placeholder="e.g. CEA-KA-2024-88412"
+                onChangeText={(val) => {
+                  setHospitalLicense(val);
+                  clearError('hospitalLicense');
+                }}
+                placeholder="Enter CEA registration number"
                 placeholderTextColor={colors.textMuted}
               />
+              {errors.hospitalLicense ? (
+                <View style={[styles.errorRow, { marginTop: -8, marginBottom: spacing.md }]}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.hospitalLicense}</Text>
+                </View>
+              ) : null}
 
               <View style={styles.inputRow}>
                 <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -467,7 +509,7 @@ export default function RegisterProviderScreen() {
                     value={totalBeds}
                     onChangeText={setTotalBeds}
                     keyboardType="number-pad"
-                    placeholder="e.g. 50"
+                    placeholder="Enter total inpatient beds"
                     placeholderTextColor={colors.textMuted}
                   />
                 </View>
@@ -495,19 +537,28 @@ export default function RegisterProviderScreen() {
                 Medical Council Registration No. (MCI / State Council) *
               </Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, errors.doctorCouncilNumber && styles.inputError]}
                 value={doctorCouncilNumber}
-                onChangeText={setDoctorCouncilNumber}
-                placeholder="e.g. MCI-KA-2018-99214"
+                onChangeText={(val) => {
+                  setDoctorCouncilNumber(val);
+                  clearError('doctorCouncilNumber');
+                }}
+                placeholder="Enter medical council registration number"
                 placeholderTextColor={colors.textMuted}
               />
+              {errors.doctorCouncilNumber ? (
+                <View style={[styles.errorRow, { marginTop: -8, marginBottom: spacing.md }]}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.doctorCouncilNumber}</Text>
+                </View>
+              ) : null}
 
               <Text style={styles.inputLabel}>Medical Qualifications / Degrees *</Text>
               <TextInput
                 style={styles.textInput}
                 value={doctorDegree}
                 onChangeText={setDoctorDegree}
-                placeholder="e.g. MBBS, MD, MS, DM"
+                placeholder="Enter qualifications and degrees"
                 placeholderTextColor={colors.textMuted}
               />
 
@@ -518,7 +569,7 @@ export default function RegisterProviderScreen() {
                     style={styles.textInput}
                     value={doctorSpecialization}
                     onChangeText={setDoctorSpecialization}
-                    placeholder="e.g. Cardiology"
+                    placeholder="Enter primary specialization"
                     placeholderTextColor={colors.textMuted}
                   />
                 </View>
@@ -529,7 +580,7 @@ export default function RegisterProviderScreen() {
                     value={consultationFee}
                     onChangeText={setConsultationFee}
                     keyboardType="number-pad"
-                    placeholder="750"
+                    placeholder="Enter consultation fee"
                     placeholderTextColor={colors.textMuted}
                   />
                 </View>
@@ -543,19 +594,28 @@ export default function RegisterProviderScreen() {
                 Drug Retail License Number (Form 20 & 21) *
               </Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, errors.drugLicenseNumber && styles.inputError]}
                 value={drugLicenseNumber}
-                onChangeText={setDrugLicenseNumber}
-                placeholder="e.g. KA-DRUG-20/21-65481"
+                onChangeText={(val) => {
+                  setDrugLicenseNumber(val);
+                  clearError('drugLicenseNumber');
+                }}
+                placeholder="Enter Form 20 & 21 drug license number"
                 placeholderTextColor={colors.textMuted}
               />
+              {errors.drugLicenseNumber ? (
+                <View style={[styles.errorRow, { marginTop: -8, marginBottom: spacing.md }]}>
+                  <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{errors.drugLicenseNumber}</Text>
+                </View>
+              ) : null}
 
               <Text style={styles.inputLabel}>Registered Pharmacist Name & Reg No. *</Text>
               <TextInput
                 style={styles.textInput}
                 value={pharmacistName}
                 onChangeText={setPharmacistName}
-                placeholder="Pharmacist Name (Reg #)"
+                placeholder="Enter pharmacist name and reg number"
                 placeholderTextColor={colors.textMuted}
               />
 
@@ -564,7 +624,7 @@ export default function RegisterProviderScreen() {
                 style={styles.textInput}
                 value={gstin}
                 onChangeText={setGstin}
-                placeholder="29ABCDE1234F1Z5"
+                placeholder="Enter GSTIN number"
                 placeholderTextColor={colors.textMuted}
               />
             </>
@@ -581,21 +641,11 @@ export default function RegisterProviderScreen() {
             </View>
             <Pressable
               style={styles.uploadBtn}
-              onPress={() => {
-                Alert.alert(
-                  'Upload License Document',
-                  'Select registration certificate file from device.',
-                  [
-                    {
-                      text: 'Select PDF File',
-                      onPress: () =>
-                        setUploadedDoc(
-                          `${activeRoleConfig.title}_Certificate_${Date.now().toString().slice(-4)}.pdf`,
-                        ),
-                    },
-                    { text: 'Cancel', style: 'cancel' },
-                  ],
-                );
+              onPress={async () => {
+                const file = await pickDocumentOrImage();
+                if (file) {
+                  setUploadedDoc(file.name);
+                }
               }}
             >
               <Text style={styles.uploadBtnText}>Upload</Text>
@@ -615,7 +665,7 @@ export default function RegisterProviderScreen() {
             style={styles.textInput}
             value={bankName}
             onChangeText={setBankName}
-            placeholder="e.g. HDFC Bank, SBI, ICICI"
+            placeholder="Enter bank name"
             placeholderTextColor={colors.textMuted}
           />
 
@@ -627,7 +677,7 @@ export default function RegisterProviderScreen() {
                 value={accountNumber}
                 onChangeText={setAccountNumber}
                 keyboardType="number-pad"
-                placeholder="Account number"
+                placeholder="Enter account number"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -638,7 +688,7 @@ export default function RegisterProviderScreen() {
                 value={ifscCode}
                 onChangeText={setIfscCode}
                 autoCapitalize="characters"
-                placeholder="HDFC0001234"
+                placeholder="Enter IFSC code"
                 placeholderTextColor={colors.textMuted}
               />
             </View>
@@ -650,16 +700,19 @@ export default function RegisterProviderScreen() {
             value={upiId}
             onChangeText={setUpiId}
             autoCapitalize="none"
-            placeholder="name@upi"
+            placeholder="Enter UPI ID"
             placeholderTextColor={colors.textMuted}
           />
         </Card>
 
         {/* 5. LEGAL DECLARATION & CODE OF CONDUCT */}
-        <Card style={styles.declarationCard} padding="md">
+        <Card style={[styles.declarationCard, errors.isAgreed && styles.inputError]} padding="md">
           <Pressable
             style={styles.checkboxRow}
-            onPress={() => setIsAgreed(!isAgreed)}
+            onPress={() => {
+              setIsAgreed(!isAgreed);
+              clearError('isAgreed');
+            }}
             accessibilityLabel="Agree to OneBuddy Provider Terms"
           >
             <View
@@ -677,6 +730,12 @@ export default function RegisterProviderScreen() {
             </Text>
           </Pressable>
         </Card>
+        {errors.isAgreed ? (
+          <View style={[styles.errorRow, { marginTop: spacing.xs, marginBottom: spacing.sm }]}>
+            <Ionicons name="alert-circle" size={14} color="#EF4444" />
+            <Text style={styles.errorText}>{errors.isAgreed}</Text>
+          </View>
+        ) : null}
 
         {/* Action Buttons */}
         <Pressable
@@ -864,6 +923,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     marginBottom: spacing.md,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: -8,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '600',
   },
   inputRow: {
     flexDirection: 'row',
